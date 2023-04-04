@@ -1,0 +1,17 @@
+preprocess/data
+preprocess/datasets
+preprocess/LANZHOU
+preprocess/MODMA
+preprocess/unuse_data
+results
+meta
+old
+models
+runs
+ser_pretrain
+wandb
+*.pt
+.idea
+*.png
+*.svg
+*.txt
