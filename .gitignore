@@ -12,6 +12,5 @@ ser_pretrain
 wandb
 *.pt
 .idea
-*.png
 *.svg
 *.txt
