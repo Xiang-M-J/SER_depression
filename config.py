@@ -31,7 +31,7 @@ class Args:
                  dataset_name="MODMA",
                  save=False,
                  augment=False,
-                 scheduler_type=1,
+                 scheduler_type=2,
                  gamma=0.3,
                  step_size=30,
                  warmup=400,

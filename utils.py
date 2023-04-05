@@ -102,6 +102,9 @@ def sample_dataset(data_loader, sample_num, batch_size):
 
 
 def dataset_num_class(dataset_name):
+    """
+    用在域适应中，返回数据集对应的类别数
+    """
     num_class = []
     for name in dataset_name:
         if name == "IEMOCAP":
@@ -192,6 +195,17 @@ def load_multi_dataset(name, spilt_rate, random_seed, batch_size, out_type=True,
 
 
 def load_meta_dataset(name, length=256, version="V2", order=3, return_residual=False, appendix=None):
+    """
+    加载元学习数据集
+
+    Args:
+        name: 数据集的名字
+        length: 截取长度
+        version: 数据集版本
+        order: 数据集阶数
+        return_residual: 是否返回剩余的数据集（用作测试数据集）
+        appendix: 是否输出数据集标号
+    """
     data = np.load(f"../preprocess/data/{name}_{version}_order{order}.npy", allow_pickle=True).item()
     x = data['x']
     y = data['y']
@@ -213,6 +227,9 @@ def load_meta_dataset(name, length=256, version="V2", order=3, return_residual=F
 
 
 def accuracy_cal_numpy(y_pred, y_true):
+    """
+    计算准确率(numpy)
+    """
     predict = np.argmax(y_pred.numpy(), 1)
     label = np.argmax(y_true.numpy(), 1)
     true_num = (predict == label).sum()
@@ -220,6 +237,9 @@ def accuracy_cal_numpy(y_pred, y_true):
 
 
 def accuracy_cal(y_pred, y_true):
+    """
+    计算准确率(torch)
+    """
     predict = torch.max(y_pred.data, 1)[1]  # torch.max()返回[values, indices]，torch.max()[1]返回indices
     if len(y_true.data.shape) == 1:
         label = y_true.data
@@ -230,6 +250,9 @@ def accuracy_cal(y_pred, y_true):
 
 
 def compare_key(src_key: str, tgt_key: str):
+    """
+    比较两个权重的键，并返回不同的部分（用于加载预训练模型）
+    """
     src_key = src_key.split('.')
     tgt_key = tgt_key.split('.')
     mini_len = min(len(src_key), len(tgt_key))
@@ -246,8 +269,10 @@ def compare_key(src_key: str, tgt_key: str):
     return tmp_src_key, tmp_tgt_key
 
 
-# 更新混淆矩阵
 def confusion_matrix(pred, labels, conf_matrix):
+    """
+    更新混淆矩阵
+    """
     pred = torch.max(pred, 1)[1]
     labels = torch.max(labels, 1)[1]
     for p, t in zip(pred, labels):
@@ -347,6 +372,9 @@ class myDataset(dataset.Dataset):
 
 
 class myWavLoader(dataset.Dataset):
+    """
+    直接加载音频原始数据作为输入（wav2vec2, hubert）
+    """
     def __init__(self, files, duration=10) -> None:
         super(myWavLoader, self).__init__()
         self.files = files
@@ -375,6 +403,9 @@ class myWavLoader(dataset.Dataset):
 
 
 class Metric:
+    """
+    存储模型训练和测试时的指标
+    """
     def __init__(self, mode="train"):
         if mode == "train":
             self.mode = "train"
@@ -541,6 +572,9 @@ def plot_2(path, name: str, result_path: str = "results/", ):
 
 
 class logger:
+    """
+    日志记录（仅作为参考，更多的时候看Tensorboard中的记录）
+    """
     def __init__(self, model_name: str, addition: str, filename: str = "log.txt"):
         self.model_name = model_name
         self.addition = addition
@@ -588,28 +622,6 @@ class logger:
             f.write("========================\t" + "test end" + "\t========================\n")
 
 
-def log(train_metric: Metric, test_metric: Metric, model_name: str, addition: str):
-    date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with open("log.txt", 'a') as f:
-        f.write("========================\t" + date + "\t========================\n")
-        f.write(f"model.md name: \t{model_name}\n")
-        f.write(f"addition: \t{addition}\n")
-        f.write("train(final): \t\t" + "train loss: {:.4f}\t train accuracy: {:.3f}\t validation loss: {:.4f}\t "
-                                       "validation accuracy: {:.3f} \n".format(train_metric.train_loss[-1],
-                                                                               train_metric.train_acc[-1],
-                                                                               train_metric.val_loss[-1],
-                                                                               train_metric.val_acc[-1]))
-        f.write("train(max_min): \t" + "train loss: {:.4f}\t train accuracy: {:.3f}\t validation loss: {:.4f}\t "
-                                       "validation accuracy: {:.3f} \n".format(min(train_metric.train_loss),
-                                                                               max(train_metric.train_acc),
-                                                                               min(train_metric.val_loss),
-                                                                               max(train_metric.val_acc)))
-
-        f.write("test: \t\t\t\t" + "test loss: \t{:.4f} \t test accuracy:\t {:.3f} \n".format(test_metric.test_loss,
-                                                                                              test_metric.test_acc))
-        f.write("\n")
-
-
 def l2_regularization(model, alpha: float):
     """
     L2正则化（加损失）
@@ -629,13 +641,16 @@ def l2_regularization(model, alpha: float):
 
 
 def onehot2int(onehot):
+    """
+    onehot -> int(应该没用)
+    """
     label = torch.max(onehot.data, 1)[1]
     return label
 
 
 def smooth_labels(labels, factor=0.1):
     """
-    标签平滑
+    标签平滑（在loss函数设置label_smoothing=0.1能起到一样的效果）
 
     Args:
         labels: 原始标签
@@ -650,11 +665,17 @@ def smooth_labels(labels, factor=0.1):
 
 
 def noam(d_model, step, warmup):
+    """
+    noam scheduler
+    """
     fact = min(step ** (-0.5), step * warmup ** (-1.5))
     return fact * (d_model ** (-0.5))
 
 
 def plot_noam(args: Args):
+    """
+    绘制noam scheduler的学习率变化曲线
+    """
     lr = []
     for i in range(1000):
         lr.append(args.initial_lr * noam(d_model=args.d_model, step=i + 1, warmup=args.warmup))
@@ -670,6 +691,9 @@ def cleanup():
 
 
 class WarmupScheduler:
+    """
+    用在Transformer的训练中，主要用在CNN_ML_Transformer中
+    """
     def __init__(self, optimizer, n_step, warmup, d_model, initial_lr):
         self.optimizer = optimizer
         self.n_step = n_step
@@ -711,6 +735,9 @@ def check_dir():
 
 
 def print_model(model):
+    """
+    打印模型参数，梯度
+    """
     for name, params in model.named_parameters():
         print('-->name:', name)
         print('-->para:', params)
@@ -720,6 +747,9 @@ def print_model(model):
 
 
 def log_model(model, val_acc):
+    """
+    记录模型参数，梯度
+    """
     with open("model.txt", 'a') as f:
         f.write(str(val_acc) + "\n")
         for name, params in model.named_parameters():

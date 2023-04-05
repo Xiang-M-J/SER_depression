@@ -1,19 +1,19 @@
 import numpy as np
-import torch.nn as nn
 import torch
-from CNN import CausalConv, CNNNet, WeightLayer, Temporal_Aware_Block
-from config import Args
-from TransformerEncoder import TransformerEncoder, TransformerEncoderLayer
-from Transformer import PositionEncoding, Encoder, encoderLayer
+import torch.nn as nn
 from einops.layers.torch import Rearrange
+
+from CNN import CausalConv, WeightLayer, Temporal_Aware_Block
+from Transformer import PositionEncoding, Encoder
+from TransformerEncoder import TransformerEncoder, TransformerEncoderLayer
+from config import Args
 from utils import cal_seq_len
 
 
 class TIM(nn.Module):
     """
-    用于预训练
+    基准网络
     """
-
     def __init__(self, args: Args):
         super(TIM, self).__init__()
         self.name = "TIM"
@@ -31,6 +31,7 @@ class TIM(nn.Module):
 
 
 class CNN_Transformer(nn.Module):  # input shape: [N, C, L]
+    """落后版本的模型，将自己写的Transformer换成官方的Transformer后也能在迭代一段时候后稳定大概91%"""
     def __init__(self, args: Args):
         super(CNN_Transformer, self).__init__()
         self.name = "CNN_Transformer"
@@ -64,6 +65,9 @@ class CNN_Transformer(nn.Module):  # input shape: [N, C, L]
 
 
 class CNN_Transformer_error(nn.Module):  # input shape: [N, C, L]
+    """
+    自己写的TransformerEncoder不太好使
+    """
     def __init__(self, args: Args):
         super(CNN_Transformer_error, self).__init__()
         # self.plus_scores = args.plus_scores
@@ -82,27 +86,19 @@ class CNN_Transformer_error(nn.Module):  # input shape: [N, C, L]
             Rearrange('N C L -> N (C L)'),
             nn.Linear(in_features=args.d_model, out_features=args.num_class),
         )
-        # if self.plus_scores:
-        #     self.scores = nn.Sequential(
-        #         Rearrange('N L C -> N (L C)'),
-        #         nn.Linear(in_features=args.d_model * cal_seq_len(args.seq_len, 2), out_features=100),
-        #         nn.Linear(in_features=100, out_features=6)
-        #     )
 
     def forward(self, x):
         x = self.generalFeatureExtractor(x)
         x = self.middle(x)
         x, _ = self.specificFeatureExtractor(x)
-        # if self.plus_scores and train:
-        #     scores = self.scores(x)
-        #     x = self.Classifier(x)
-        #     return x, scores
-        # else:
         x = self.Classifier(x)
         return x
 
 
 class CNN_ML_Transformer(nn.Module):
+    """
+    换了官方的Transformer后，模型性能一个字拉，要靠warmup才能勉强跑出比较好看的成绩，也不容易收敛(100次还是波动幅度大)
+    """
     def __init__(self, args: Args):
         super(CNN_ML_Transformer, self).__init__()
         self.name = "CNN_ML_Transformer"
@@ -150,6 +146,9 @@ class CNN_ML_Transformer(nn.Module):
 
 
 class Transformer_TIM(nn.Module):
+    """
+    两种改进型（AT_TIM, Transformer_DeltaTIM）的原始模型
+    """
     def __init__(self, args: Args):
         super(Transformer_TIM, self).__init__()
         self.name = "Transformer_TIM"
@@ -194,6 +193,9 @@ class Transformer_TIM(nn.Module):
 
 
 class TIM_Attention(nn.Module):
+    """
+    TIM网络的注意力机制
+    """
     def __init__(self, args: Args):
         super(TIM_Attention, self).__init__()
         self.Wq = nn.Sequential(
@@ -243,6 +245,9 @@ class TIM_Attention(nn.Module):
 
 
 class AT_TIM(nn.Module):
+    """
+    基于注意力机制的TIM，用注意力机制取代了weight layer，也可以取代Transformer
+    """
     def __init__(self, args: Args):
         super(AT_TIM, self).__init__()
         self.name = "AT_TIM"
@@ -295,6 +300,9 @@ class AT_TIM(nn.Module):
 
 
 class Prepare(nn.Module):
+    """
+    mfcc -> Transformer
+    """
     def __init__(self, args: Args, hidden_dim=128):
         super(Prepare, self).__init__()
 
@@ -312,6 +320,9 @@ class Prepare(nn.Module):
 
 
 class Middle(nn.Module):
+    """
+    Transformer -> TIM
+    """
     def __init__(self, args: Args):
         super(Middle, self).__init__()
         self.rearrange = Rearrange("N L C -> N C L")
@@ -323,6 +334,9 @@ class Middle(nn.Module):
 
 
 class Transformer_DeltaTIM(nn.Module):
+    """
+    Transformer + 差分TIM（用后一级的TAB输出减去前一级的TAB输出，共7个差分再加上最后一级的TAB输出共计8个送入weight layer）
+    """
     def __init__(self, args: Args):
         super(Transformer_DeltaTIM, self).__init__()
         self.name = "Transformer_DeltaTIM"
@@ -363,7 +377,6 @@ class Transformer_DeltaTIM(nn.Module):
         else:
             x = self.generalFeatureExtractor(x)
         x = self.middle(x)
-
         x = self.conv(x)
         skip_stack = None
         delta_stack = None
@@ -389,6 +402,9 @@ class Transformer_DeltaTIM(nn.Module):
 
 
 class Transformer(nn.Module):
+    """
+    基准网络测试
+    """
     def __init__(self, args: Args):
         super(Transformer, self).__init__()
         self.name = "Transformer"
