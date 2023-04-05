@@ -442,7 +442,10 @@ class Transformer(nn.Module):
         return x
 
 
-class MLTransformer_TIM(nn.Module):  # 可能由于Transformer的层数不深，导致ML的意义不大
+class MLTransformer_TIM(nn.Module):
+    """
+    可能由于Transformer的层数不深，导致ML(multi level)的意义不大
+    """
     def __init__(self, args: Args):
         super(MLTransformer_TIM, self).__init__()
         self.name = "MLTransformer_TIM"
@@ -494,6 +497,9 @@ class MLTransformer_TIM(nn.Module):  # 可能由于Transformer的层数不深，
 
 
 class SET(nn.Module):
+    """
+    SET (我的版本 简化版本)
+    """
     def __init__(self, args: Args):
         super(SET, self).__init__()
         self.name = "SET"
@@ -539,6 +545,9 @@ class SET(nn.Module):
 
 
 class convBlock(nn.Module):
+    """
+    speech emotion Transformer（论文版本）中的卷积块
+    """
     def __init__(self, in_dim, out_dim, pool_size, kernel_size=3):
         super(convBlock, self).__init__()
         self.block = nn.Sequential(
@@ -552,6 +561,9 @@ class convBlock(nn.Module):
 
 
 class SET_official(nn.Module):
+    """
+    speech emotion Transformer（论文版本）
+    """
     def __init__(self, args: Args):
         super(SET_official, self).__init__()
         self.name = "SET_official"
