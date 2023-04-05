@@ -4,11 +4,7 @@ import torch
 
 from config import Args
 
-# from config import device
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-
-# device = 'cpu'
 
 
 class CNNNet(nn.Module):

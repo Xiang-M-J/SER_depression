@@ -26,52 +26,31 @@ plt.rcParams['font.family'] = ['SimHei']
 
 
 class EarlyStopping:
-    """Early stops the training if validation loss doesn't improve after a given patience."""
+    """Early stops the training if validation accuracy doesn't change after a given patience."""
 
-    def __init__(self, save_path, patience=7, verbose=False, delta=0):
+    def __init__(self, patience=5, use_acc: float = 80.0):
         """
         Args:
-            save_path : 模型保存文件夹
-            patience (int): How long to wait after last time validation loss improved.
-                            Default: 7
-            verbose (bool): If True, prints a message for each validation loss improvement. 
-                            Default: False
-            delta (float): Minimum change in the monitored quantity to qualify as an improvement.
-                            Default: 0
+            patience (int): How long to wait after last time validation loss improved. Default: 5
+            use_acc (float): 只有当验证集准确率大于use_acc，才会触发早停止
         """
-        self.save_path = save_path
         self.patience = patience
-        self.verbose = verbose
-        self.counter = 0
-        self.best_score = None
-        self.early_stop = False
-        self.val_loss_min = np.Inf
-        self.delta = delta
+        self.patience_ = patience
+        self.use_acc = use_acc
+        self.last_val_acc = 0
 
-    def __call__(self, val_loss, model):
-
-        score = -val_loss
-
-        if self.best_score is None:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model)
-        elif score < self.best_score + self.delta:
-            self.counter += 1
-            print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
-            if self.counter >= self.patience:
-                self.early_stop = True
+    def __call__(self, val_acc) -> bool:
+        if (abs(self.last_val_acc - val_acc) < 1e-9) and (val_acc > self.use_acc):
+            self.patience -= 1
         else:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model)
-            self.counter = 0
-
-    def save_checkpoint(self, val_loss, model):
-        """Saves model.txt when validation loss decrease."""
-        if self.verbose:
-            print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model.md ...')
-        path = os.path.join(self.save_path, 'best_network.pth')
-        torch.save(model.state_dict(), path)  # 这里会存储迄今最优模型的参数
-        self.val_loss_min = val_loss
+            self.patience = 5
+        self.last_val_acc = val_acc
+        if self.patience == 1:
+            print(f"The validation accuracy has not changed in {self.patience_} iterations, stop train")
+            print(f"The final validation accuracy is {val_acc}")
+            return True
+        else:
+            return False
 
 
 def load_dataset(dataset_name, spilt_rate, random_seed, version='V2', order=3):
@@ -742,7 +721,7 @@ def print_model(model):
 
 def log_model(model, val_acc):
     with open("model.txt", 'a') as f:
-        f.write(str(val_acc)+"\n")
+        f.write(str(val_acc) + "\n")
         for name, params in model.named_parameters():
             f.write(f'-->name: {name} \n')
             # print('-->para:', params)

@@ -11,7 +11,7 @@ from torch.utils.data import dataloader
 
 from model import CNN_Transformer, TIM, SET, SET_official, CNN_ML_Transformer, Transformer_TIM, MLTransformer_TIM, \
     Transformer, CNN_Transformer_error, AT_TIM, Transformer_DeltaTIM
-from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, plot, logger, \
+from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, plot, logger, EarlyStopping,\
     l2_regularization, noam, IEMOCAP_LABELS, compare_key
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -114,8 +114,8 @@ class Net_Instance:
         #     betas=(self.args.beta1, self.args.beta2),
         # )
         optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, betas=(self.args.beta1, self.args.beta2))
-
-        loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=0.1)  # 相当于smooth_labels的功能
+        loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=0.1)  # label_smoothing=0.1 相当于smooth_labels的功能
+        early_stop = EarlyStopping(patience=5)
         if self.args.scheduler_type == 1:
             scheduler = torch.optim.lr_scheduler.StepLR(
                 optimizer, step_size=self.args.step_size, gamma=self.args.gamma, last_epoch=-1)
@@ -181,6 +181,7 @@ class Net_Instance:
             metric.train_loss.append(train_loss / math.ceil((train_num / batch_size)))
             metric.val_acc.append(float(val_correct * 100) / val_num)
             metric.val_loss.append(val_loss / math.ceil(val_num / batch_size))
+
             plt.clf()
             plt.plot(metric.train_acc)
             plt.plot(metric.val_acc)
@@ -219,6 +220,9 @@ class Net_Instance:
                         torch.save(model, self.best_path)
             else:
                 print(f"val_accuracy did not improve from {best_val_accuracy}")
+            if early_stop(metric.val_acc[-1]):
+                break
+
         if self.args.save:
             torch.save(model, self.last_path)
             print(f"save model(last): {self.last_path}")
@@ -235,7 +239,7 @@ class Net_Instance:
             else:
                 self.writer.add_graph(model, [dummy_input, mask])
             self.logger.train(train_metric=metric)
-        return metric
+        # return metric
 
     def test(self, test_dataset, batch_size: int, model_path: str = None):
         if model_path is None:
@@ -295,4 +299,4 @@ class Net_Instance:
             self.writer.add_text("classification report", report)
             self.logger.test(test_metric=metric)
             np.save(self.result_path + "data/" + self.args.model_name + "_test_metric.npy", metric.item())
-        return metric
+        # return metric

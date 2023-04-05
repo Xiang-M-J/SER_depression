@@ -347,7 +347,8 @@ class Transformer_DeltaTIM(nn.Module):
                                      dilation=i, dropout=args.drop_rate)
             )
         self.drop = nn.Dropout(p=args.drop_rate)
-        self.weight = WeightLayer(args.dilation + 1)
+        self.weight = WeightLayer(args.dilation)
+        # self.weight = WeightLayer(2 * args.dilation - 1)
         self.Classifier = nn.Sequential(
             Rearrange('N C L D -> N (C L D)'),
             nn.Linear(in_features=args.seq_len * args.filters, out_features=100),
@@ -373,14 +374,15 @@ class Transformer_DeltaTIM(nn.Module):
                 skip_stack = skip_out.unsqueeze(0)
             else:
                 skip_stack = torch.cat((skip_stack, skip_out.unsqueeze(0)), dim=0)
-        for i in range(len(skip_stack)-1):
+        for i in range(len(skip_stack) - 1):
             if delta_stack is None:
-                skip_temp = skip_stack[i+1] - skip_stack[i]
+                skip_temp = skip_stack[i + 1] - skip_stack[i]
                 delta_stack = skip_temp.unsqueeze(-1)
             else:
                 skip_temp = skip_stack[i + 1] - skip_stack[i]
                 delta_stack = torch.cat((delta_stack, skip_temp.unsqueeze(-1)), dim=-1)
-        delta_stack = torch.cat([x.unsqueeze(-1), delta_stack, skip_out.unsqueeze(-1)], dim=-1)
+        delta_stack = torch.cat([delta_stack, skip_out.unsqueeze(-1)], dim=-1)
+        # delta_stack = torch.cat([delta_stack, skip_stack.permute(1, 2, 3, 0)], dim=-1)
         x = self.weight(delta_stack)
         x = self.Classifier(x)
         return x
