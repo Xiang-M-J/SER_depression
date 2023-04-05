@@ -10,7 +10,7 @@ from tensorboardX import SummaryWriter
 from torch.utils.data import dataloader
 
 from model import CNN_Transformer, TIM, SET, SET_official, CNN_ML_Transformer, Transformer_TIM, MLTransformer_TIM, \
-    Transformer, CNN_Transformer_error
+    Transformer, CNN_Transformer_error, AT_TIM
 from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, plot, logger, \
     l2_regularization, noam, IEMOCAP_LABELS, compare_key
 
@@ -54,6 +54,8 @@ class Net_Instance:
                 model = MLTransformer_TIM(self.args)
             elif self.model_type == "Transformer":
                 model = Transformer(self.args)
+            elif self.model_type == "AT_TIM":
+                model = AT_TIM(self.args)
             elif self.model_type == "error":
                 model = CNN_Transformer_error(self.args)
             else:

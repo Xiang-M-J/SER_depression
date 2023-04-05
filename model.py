@@ -1,6 +1,7 @@
+import numpy as np
 import torch.nn as nn
 import torch
-from CNN import CausalConv, CNNNet, WeightLayer
+from CNN import CausalConv, CNNNet, WeightLayer, Temporal_Aware_Block
 from config import Args
 from TransformerEncoder import TransformerEncoder, TransformerEncoderLayer
 from Transformer import PositionEncoding, Encoder, encoderLayer
@@ -89,10 +90,9 @@ class CNN_Transformer_error(nn.Module):  # input shape: [N, C, L]
         #     )
 
     def forward(self, x):
-
         x = self.generalFeatureExtractor(x)
         x = self.middle(x)
-        x,_ = self.specificFeatureExtractor(x)
+        x, _ = self.specificFeatureExtractor(x)
         # if self.plus_scores and train:
         #     scores = self.scores(x)
         #     x = self.Classifier(x)
@@ -100,6 +100,7 @@ class CNN_Transformer_error(nn.Module):  # input shape: [N, C, L]
         # else:
         x = self.Classifier(x)
         return x
+
 
 class CNN_ML_Transformer(nn.Module):
     def __init__(self, args: Args):
@@ -175,9 +176,9 @@ class Transformer_TIM(nn.Module):
 
         self.Classifier = nn.Sequential(
             Rearrange('N C L -> N (C L)'),
-            nn.Linear(in_features=args.seq_len * args.filters, out_features=1000),
-            nn.Dropout(0.3),
-            nn.Linear(in_features=1000, out_features=args.num_class),
+            nn.Linear(in_features=args.seq_len * args.filters, out_features=100),
+            nn.Dropout(0.2),
+            nn.Linear(in_features=100, out_features=args.num_class),
         )
 
     def forward(self, x, mask=None):
@@ -189,6 +190,107 @@ class Transformer_TIM(nn.Module):
         x = self.middle(x)
         x = self.specialFeatureExtractor(x)
         x = self.Classifier(x)
+        return x
+
+
+class TIM_Attention(nn.Module):
+    def __init__(self, args: Args):
+        super(TIM_Attention, self).__init__()
+        self.Wq = nn.Sequential(
+            nn.Conv2d(in_channels=args.filters, out_channels=args.d_qkv, kernel_size=1, padding="same"),
+            Rearrange("N C L H -> N H L C")
+            # [batch_size, feature_dim, seq_len, n_head] -> [batch_size, n_head, seq_len, feature_dim ]
+        )
+        self.Wk = nn.Sequential(
+            nn.Conv2d(in_channels=args.filters, out_channels=args.d_qkv, kernel_size=1, padding="same"),
+            Rearrange("N C L H -> N H L C")
+        )
+        self.Wv = nn.Sequential(
+            nn.Conv2d(in_channels=args.filters, out_channels=args.d_qkv, kernel_size=1, padding="same"),
+            Rearrange("N C L H -> N H L C")
+        )
+        self.score_flatten = nn.Sequential(
+            Rearrange("N H L C -> N C L H"),
+            nn.Dropout(0.1),
+            nn.Conv2d(in_channels=args.d_qkv, out_channels=args.filters, kernel_size=1, padding="same"),
+            Rearrange("N H L C -> N L (H C)")
+            # nn.BatchNorm2d(args.filters)
+        )
+        self.dropout = nn.Dropout(0.1)
+        self.x_flatten = Rearrange("N C L H -> N L (H C)")
+        self.d_model = (args.dilation * args.d_qkv)
+        # self.layer_norm = nn.LayerNorm([args.filters, args.seq_len, args.dilation])
+        self.norm = nn.BatchNorm1d(args.seq_len)
+        self.fc = nn.Sequential(
+            nn.Linear(in_features=args.filters*args.dilation, out_features=args.d_ff),
+            nn.ReLU(),
+            nn.Linear(in_features=args.d_ff, out_features=args.filters*args.dilation),
+            nn.ReLU()
+        )
+
+    def forward(self, x):
+        query = self.Wq(x)
+        key = self.Wk(x)
+        value = self.Wv(x)
+        attn = torch.matmul(query, key.transpose(-1, -2)) / (np.sqrt(self.d_model))
+        attn = torch.softmax(attn, dim=-1)
+        attn = self.dropout(attn)
+        score = torch.matmul(attn, value)
+        score = self.score_flatten(score)
+        score = self.norm(score + self.x_flatten(x))
+        score = self.fc(score) + score
+        return score  # shape: [N L H*C]
+
+
+class AT_TIM(nn.Module):
+    def __init__(self, args: Args):
+        super(AT_TIM, self).__init__()
+        self.name = "AT_TIM"
+        self.dilation_layer = nn.ModuleList([])
+        self.conv = (nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1,
+                               padding=0))
+        if args.dilation is None:
+            args.dilation = 8
+        for i in [2 ** i for i in range(args.dilation)]:
+            self.dilation_layer.append(
+                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
+                                     dilation=i, dropout=args.drop_rate)
+            )
+        self.drop = nn.Dropout(p=args.drop_rate)
+
+        self.attn = TIM_Attention(args)
+        # self.weight = WeightLayer(args.dilation)
+        self.classifier = nn.Sequential(
+            # nn.AdaptiveAvgPool2d((args.seq_len, 1)),
+            # Rearrange("N C L H -> N C (L H)"),
+            # nn.AdaptiveAvgPool1d(1),
+            nn.Linear(in_features=args.filters*args.dilation, out_features=1),
+            nn.Dropout(0.1),
+            Rearrange('N C L -> N (C L)'),
+            nn.Linear(in_features=args.seq_len, out_features=args.num_class)
+        )
+
+    def forward(self, x):
+        x_f = x
+        x_b = torch.flip(x, dims=[-1])
+        x_f = self.conv(x_f)
+        x_b = self.conv(x_b)
+        skip_stack = None
+        skip_out_f = x_f
+        skip_out_b = x_b
+        for layer in self.dilation_layer:
+            skip_out_f = layer(skip_out_f)
+            skip_out_b = layer(skip_out_b)
+            skip_temp = torch.add(skip_out_f, skip_out_b)
+            skip_temp = skip_temp.unsqueeze(-1)
+            if skip_stack is None:
+                skip_stack = skip_temp
+            else:
+                skip_stack = torch.cat((skip_stack, skip_temp), dim=-1)
+                # skip_stack shape: [batch_size, feature_dim, seq_len, dilation]
+        x = self.attn(skip_stack)
+        # x = self.weight(x)
+        x = self.classifier(x)
         return x
 
 
@@ -212,7 +314,7 @@ class Transformer(nn.Module):
         )
         self.Classifier = nn.Sequential(
             Rearrange("N L C -> N C L"),
-            nn.Conv1d(in_channels=args.d_model, out_channels=64, kernel_size=1,padding="same"),
+            nn.Conv1d(in_channels=args.d_model, out_channels=64, kernel_size=1, padding="same"),
             nn.BatchNorm1d(64),
             Rearrange('N C L -> N (C L)'),
             nn.Linear(in_features=args.seq_len * 64, out_features=1000),
@@ -397,7 +499,7 @@ if __name__ == "__main__":
     # print(nn.Embedding(10, args.feature_dim)(input_).shape)
     # y, scores = model(x)
     # print(y.shape, scores.shape)
-    model = Transformer_TIM(args).cuda()
+    model = AT_TIM(args).cuda()
     input_ = torch.rand([4, 39, 313]).cuda()
     x = model(input_)
     print(x.shape)

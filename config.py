@@ -16,8 +16,8 @@ import argparse
 
 class Args:
     def __init__(self,
-                 epochs=60,
-                 lr=6e-4,
+                 epochs=100,
+                 lr=8e-4,
                  batch_size=64,
                  spilt_rate=None,
                  weight_decay=0.1,
