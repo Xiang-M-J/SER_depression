@@ -220,11 +220,12 @@ class TIM_Attention(nn.Module):
         self.x_flatten = Rearrange("N C L H -> N L (H C)")
         self.d_model = (args.dilation * args.d_qkv)
         # self.layer_norm = nn.LayerNorm([args.filters, args.seq_len, args.dilation])
-        self.norm = nn.BatchNorm1d(args.seq_len)
+        self.norm = nn.LayerNorm(args.dilation * args.filters)
         self.fc = nn.Sequential(
-            nn.Linear(in_features=args.filters*args.dilation, out_features=args.d_ff),
+            nn.Linear(in_features=args.filters * args.dilation, out_features=args.d_ff),
+            # nn.Dropout(0.2),
             nn.ReLU(),
-            nn.Linear(in_features=args.d_ff, out_features=args.filters*args.dilation),
+            nn.Linear(in_features=args.d_ff, out_features=args.filters * args.dilation),
             nn.ReLU()
         )
 
@@ -236,9 +237,8 @@ class TIM_Attention(nn.Module):
         attn = torch.softmax(attn, dim=-1)
         attn = self.dropout(attn)
         score = torch.matmul(attn, value)
-        score = self.score_flatten(score)
-        score = self.norm(score + self.x_flatten(x))
-        score = self.fc(score) + score
+        score = self.norm(self.score_flatten(score) + self.x_flatten(x))
+        score = self.norm(self.fc(score) + score)
         return score  # shape: [N L H*C]
 
 
@@ -264,7 +264,7 @@ class AT_TIM(nn.Module):
             # nn.AdaptiveAvgPool2d((args.seq_len, 1)),
             # Rearrange("N C L H -> N C (L H)"),
             # nn.AdaptiveAvgPool1d(1),
-            nn.Linear(in_features=args.filters*args.dilation, out_features=1),
+            nn.Linear(in_features=args.filters * args.dilation, out_features=1),
             nn.Dropout(0.1),
             Rearrange('N C L -> N (C L)'),
             nn.Linear(in_features=args.seq_len, out_features=args.num_class)
@@ -291,6 +291,98 @@ class AT_TIM(nn.Module):
         x = self.attn(skip_stack)
         # x = self.weight(x)
         x = self.classifier(x)
+        return x
+
+
+class Prepare(nn.Module):
+    def __init__(self, args: Args, hidden_dim=128):
+        super(Prepare, self).__init__()
+
+        self.conv1 = nn.Conv1d(in_channels=args.feature_dim, out_channels=hidden_dim, kernel_size=1, padding="same")
+        self.bn1 = nn.BatchNorm1d(num_features=hidden_dim)
+        self.conv2 = nn.Conv1d(in_channels=hidden_dim, out_channels=args.d_model, kernel_size=1, padding="same")
+        self.bn2 = nn.BatchNorm1d(num_features=args.d_model)
+        self.act = nn.ReLU()
+        self.rearrange = Rearrange("N C L -> N L C")
+
+    def forward(self, x):
+        x = self.act(self.bn1(self.conv1(x)))
+        x = self.act(self.bn2(self.conv2(x)))
+        return self.rearrange(x)
+
+
+class Middle(nn.Module):
+    def __init__(self, args: Args):
+        super(Middle, self).__init__()
+        self.rearrange = Rearrange("N L C -> N C L")
+        self.bn = nn.BatchNorm1d(args.d_model)
+        self.conv = nn.Conv1d(in_channels=args.d_model, out_channels=args.feature_dim, kernel_size=1, padding="same")
+
+    def forward(self, x):
+        return self.conv(self.bn(self.rearrange(x)))
+
+
+class Transformer_DeltaTIM(nn.Module):
+    def __init__(self, args: Args):
+        super(Transformer_DeltaTIM, self).__init__()
+        self.name = "Transformer_DeltaTIM"
+        self.prepare = Prepare(args)
+
+        encoderLayer = TransformerEncoderLayer(args.d_model, args.n_head, args.d_ff, args.drop_rate,
+                                               batch_first=True)
+        self.generalFeatureExtractor = TransformerEncoder(
+            encoderLayer, num_layers=args.n_layer
+        )
+        self.middle = Middle(args)
+
+        self.dilation_layer = nn.ModuleList([])
+        self.conv = (nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1,
+                               padding=0))
+        if args.dilation is None:
+            args.dilation = 8
+
+        for i in [2 ** i for i in range(args.dilation)]:
+            self.dilation_layer.append(
+                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
+                                     dilation=i, dropout=args.drop_rate)
+            )
+        self.drop = nn.Dropout(p=args.drop_rate)
+        self.weight = WeightLayer(args.dilation + 1)
+        self.Classifier = nn.Sequential(
+            Rearrange('N C L D -> N (C L D)'),
+            nn.Linear(in_features=args.seq_len * args.filters, out_features=100),
+            nn.Dropout(0.2),
+            nn.Linear(in_features=100, out_features=args.num_class),
+        )
+
+    def forward(self, x, mask=None):
+        x = self.prepare(x)
+        if mask is not None:
+            x = self.generalFeatureExtractor(x, mask)
+        else:
+            x = self.generalFeatureExtractor(x)
+        x = self.middle(x)
+
+        x = self.conv(x)
+        skip_stack = None
+        delta_stack = None
+        skip_out = x
+        for layer in self.dilation_layer:
+            skip_out = layer(skip_out)
+            if skip_stack is None:
+                skip_stack = skip_out.unsqueeze(0)
+            else:
+                skip_stack = torch.cat((skip_stack, skip_out.unsqueeze(0)), dim=0)
+        for i in range(len(skip_stack)-1):
+            if delta_stack is None:
+                skip_temp = skip_stack[i+1] - skip_stack[i]
+                delta_stack = skip_temp.unsqueeze(-1)
+            else:
+                skip_temp = skip_stack[i + 1] - skip_stack[i]
+                delta_stack = torch.cat((delta_stack, skip_temp.unsqueeze(-1)), dim=-1)
+        delta_stack = torch.cat([x.unsqueeze(-1), delta_stack, skip_out.unsqueeze(-1)], dim=-1)
+        x = self.weight(delta_stack)
+        x = self.Classifier(x)
         return x
 
 
@@ -499,8 +591,8 @@ if __name__ == "__main__":
     # print(nn.Embedding(10, args.feature_dim)(input_).shape)
     # y, scores = model(x)
     # print(y.shape, scores.shape)
-    model = AT_TIM(args).cuda()
-    input_ = torch.rand([4, 39, 313]).cuda()
-    x = model(input_)
-    print(x.shape)
+    model = Transformer_DeltaTIM(args).cuda()
+    x = torch.rand([4, 39, 313]).cuda()
+    y = model(x)
+    print(y.shape)
     pass
