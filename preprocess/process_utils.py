@@ -133,7 +133,7 @@ def wav_split(data, sr, threshold, base_duration=10, overlap=0):
     return torch.Tensor(data), split_num
 
 
-def wav_split_overlap(data, sr, threshold, base_duration=10, overlap=0):
+def wav_split_overlap(data, sr, threshold, base_duration=10, overlap=0.0):
     """
     分割大于base_duration的音频
     Args:
@@ -528,6 +528,19 @@ def CASIA_code(class_name):
         raise NameError
 
 
+def CASIA_code_(class_name):
+    if class_name == 'anger':
+        return np.array([1, 0, 0, 0])
+    elif class_name == 'happy':
+        return np.array([0, 1, 0, 0])
+    elif class_name == 'sad':
+        return np.array([0, 0, 1, 0])
+    elif class_name == 'surprise':
+        return np.array([0, 0, 0, 1])
+    else:
+        raise NameError
+
+
 def IEMOCAP_code(class_name):
     if class_name == 'anger':
         return np.array([1, 0, 0, 0, 0, 0])
@@ -562,6 +575,19 @@ def RAVDESS_code(class_name):
         return np.array([0, 0, 0, 0, 0, 0, 1, 0])
     elif class_name == 'surprised':
         return np.array([0, 0, 0, 0, 0, 0, 0, 1])
+    else:
+        raise NameError
+
+
+def RAVDESS_code_(class_name):
+    if class_name == 'anger':
+        return np.array([1, 0, 0, 0])
+    elif class_name == 'happy':
+        return np.array([0, 1, 0, 0])
+    elif class_name == 'sad':
+        return np.array([0, 0, 1, 0])
+    elif class_name == 'surprised':
+        return np.array([0, 0, 0, 1])
     else:
         raise NameError
 
@@ -724,6 +750,6 @@ if __name__ == "__main__":
     # get_MODMA_extra(path="data/MODMA_V2_order3.npy")
     # load_MultiDataset_V1("MODMA", frame_length=0.05, code=MODMA_code, duration=10, resample_rate=16000, threshold=1,
     #                      extra=True, order=3, overlap=2.5)
-    multiGMM("data/MODMA_V1_order3.npy", 8, n_components=100, save_path="data/MODMA_V1_order3_cluster.npy")
-
+    # multiGMM("data/MODMA_V1_order3.npy", 8, n_components=100, save_path="data/MODMA_V1_order3_cluster.npy")
+    load_MultiDataset_V1("datasets/RAVDESS_", code=RAVDESS_code_, duration=6, overlap=1.5)
     pass

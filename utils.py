@@ -75,7 +75,7 @@ def load_dataset(dataset_name, spilt_rate, random_seed, version='V2', order=3):
 
 def load_loader(dataset_name, spilt_rate, batch_size, random_seed, version='V2', order=3):
     """
-    加载数据加载器
+    加载数据加载器(用在域适应)
     """
     datasets = load_dataset(dataset_name, spilt_rate, random_seed, version, order)
     loaders = []

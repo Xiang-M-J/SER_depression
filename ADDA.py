@@ -7,15 +7,24 @@ from einops.layers.torch import Rearrange
 
 from CNN import CausalConv
 from config import Args
-from utils import load_loader, accuracy_cal, Metric, dataset_num_class, cal_seq_len, sample_dataset
+from utils import load_loader, accuracy_cal, Metric, cal_seq_len, l2_regularization
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 class Encoder(nn.Module):
-    def __init__(self, arg):
+    def __init__(self, arg:Args):
         super(Encoder, self).__init__()
-        self.net = CausalConv(arg)
+        self.net = nn.Sequential(
+            nn.Conv1d(in_channels=arg.feature_dim, out_channels=arg.filters, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(arg.filters),
+            nn.Dropout(0.1),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(arg.filters),
+            nn.Dropout(0.1),
+            nn.ReLU(),
+        )
 
     def forward(self, x):
         x = self.net(x)
@@ -27,15 +36,15 @@ class Classifier(nn.Module):
         super(Classifier, self).__init__()
         self.net = nn.Sequential(
             Rearrange("N C L -> N (C L)"),
-            nn.Linear(arg.seq_len * arg.filters, 1000),
-            nn.BatchNorm1d(1000),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(1000, 100),
+            nn.Linear(arg.seq_len * arg.filters, 100),
             nn.BatchNorm1d(100),
             nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(100, arg.num_class[0]),
+            nn.Dropout(0.1),
+            # nn.Linear(100, 100),
+            # nn.BatchNorm1d(100),
+            # nn.ReLU(),
+            # nn.Dropout(0.1),
+            nn.Linear(100, 4),
         )
 
     def forward(self, x):
@@ -49,22 +58,18 @@ class Discriminator(nn.Module):
         self.net = nn.Sequential(
             nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
             nn.BatchNorm1d(arg.filters),
-            nn.MaxPool1d(2),
+            # nn.MaxPool1d(2),
             nn.ReLU(),
             nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
             nn.BatchNorm1d(arg.filters),
-            nn.MaxPool1d(2),
+            # nn.MaxPool1d(2),
             nn.ReLU(),
             nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
             nn.BatchNorm1d(arg.filters),
-            nn.MaxPool1d(2),
-            nn.ReLU(),
-            nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
-            nn.BatchNorm1d(arg.filters),
-            nn.MaxPool1d(2),
+            # nn.MaxPool1d(2),
             nn.ReLU(),
             Rearrange("N C L -> N (C L)"),
-            nn.Linear(cal_seq_len(arg.seq_len, 16) * arg.filters, 100),
+            nn.Linear(arg.seq_len * arg.filters, 100),
             nn.Linear(100, 2),
         )
 
@@ -77,15 +82,14 @@ class ADDATrainer:
     def __init__(self, arg, src_dataset_name, tgt_dataset_name):
         self.src_dt = src_dataset_name
         self.tgt_dt = tgt_dataset_name
-        self.src_train, self.src_val, self.src_test = \
-            load_loader(self.src_dt, arg.spilt_rate, arg.batch_size, arg.random_seed, arg.version, arg.order)
-        self.tgt_train, self.tgt_val = load_loader(self.tgt_dt, [0.8, 0.2], arg.batch_size, arg.random_seed)
+        self.src_train, self.src_val = load_loader(self.src_dt, [0.8, 0.2], arg.batch_size, arg.random_seed, "V1")
+        self.tgt_train, self.tgt_val = load_loader(self.tgt_dt, [0.8, 0.2], arg.batch_size, arg.random_seed, "V1")
 
         self.mini_seq_len = min(self.src_train.dataset.dataset.x.shape[-1], self.tgt_train.dataset.dataset.x.shape[-1])
         self.lr = arg.lr
         self.weight_decay = arg.weight_decay
         self.batch_size = arg.batch_size
-        self.iteration = 1500
+        self.iteration = 1000
         self.pretrain_epochs = 50
         self.fine_tune_epochs = 20
         self.fine_tune_num = 300
@@ -98,7 +102,7 @@ class ADDATrainer:
         self.fine_tune_best_path = f"models/ADDA/fine_tune_best.pt"
         self.fine_tune_final_path = f"models/ADDA/fine_tune_final.pt"
         arg.seq_len = self.mini_seq_len
-        arg.num_class = dataset_num_class([src_dataset_name, tgt_dataset_name])
+        # arg.num_class = dataset_num_class([src_dataset_name, tgt_dataset_name])
         self.arg = arg
         self.criterion = nn.CrossEntropyLoss()
         self.metric = Metric()
@@ -109,7 +113,8 @@ class ADDATrainer:
             Encoder(self.arg),
             Classifier(self.arg)
         ).to(device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(model.parameters(), lr=4e-5)
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.2)
         src_train_num = len(self.src_train.dataset)
         best_val_accuracy = 0
         metric = Metric()
@@ -141,6 +146,7 @@ class ADDATrainer:
             metric.val_acc.append(val_acc)
             metric.val_loss.append(val_loss)
             print(f"epoch {epoch + 1}: val_acc: {val_acc}\t val_loss: {val_loss}")
+            # scheduler.step()
 
             if val_acc > best_val_accuracy:
                 print(f"val_accuracy improved from {best_val_accuracy} to {val_acc}")
@@ -162,7 +168,7 @@ class ADDATrainer:
         src_x, src_y = src_x.to(device), src_y.to(device)
         label = model(src_x)
         correct_num = accuracy_cal(label, src_y)
-        loss = self.criterion(label, src_y)
+        loss = self.criterion(label, src_y) + l2_regularization(model, self.arg.weight_decay)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -185,9 +191,9 @@ class ADDATrainer:
     def train(self):
         mini_iter = min(len(self.src_train), len(self.tgt_train))
         # 加载预训练模型
-        tmp_model = torch.load(self.pretrain_best_path).to(device)
+        tmp_model = torch.load(self.pretrain_final_path).to(device)
         src_encoder = tmp_model[0]
-        src_classifier = tmp_model[1]
+
         # 初始化目标域编码器
         tgt_encoder = Encoder(self.arg).to(device)
         tgt_encoder.load_state_dict(src_encoder.state_dict())
@@ -230,7 +236,7 @@ class ADDATrainer:
             tgt_batch_size = tgt_y.shape[0]
             tgt_sample_num += tgt_batch_size
 
-            if step % 10 == 0:
+            if step % 5 == 0:
                 # 每10步训练一次discriminator
                 src_label = torch.ones(src_batch_size).long().to(device)
                 tgt_label = torch.zeros(tgt_batch_size).long().to(device)
@@ -283,14 +289,14 @@ class ADDATrainer:
 
                     torch.save(tgt_encoder, self.tgt_best_path)
                     torch.save(critic, self.critic_best_path)
-                    print(f"fine-tune acc improved from {best_domain_tgt_acc} to {tgt_domain_acc} ")
+                    print(f"tgt domain acc improved from {best_domain_tgt_acc} to {tgt_domain_acc} ")
                     best_domain_tgt_acc = tgt_domain_acc
                     metric.best_val_acc[0] = best_domain_tgt_acc
                     metric.best_val_acc[1] = tgt_domain_acc
                     # self.metric.best_val_acc[0] = best_eval_acc
                     # self.metric.best_val_acc[1] = tgt_domain_acc
                 else:
-                    print(f"fine-tune acc do not improve from {best_domain_tgt_acc}")
+                    print(f"tgt domain acc do not improve from {best_domain_tgt_acc}")
 
                 # 记录变量置零
                 critic_domain_acc = 0
@@ -414,13 +420,13 @@ class ADDATrainer:
 
 if __name__ == "__main__":
     arg = Args()
-    src_dataset_name = 'IEMOCAP'
-    tgt_dataset_name = "MODMA"
-
+    src_dataset_name = 'CASIA_'
+    tgt_dataset_name = "RAVDESS_"
+    # CASIA_和RAVDESS_四分类只有50%的准确率
     trainer = ADDATrainer(arg, src_dataset_name, tgt_dataset_name)
     # trainer.pretrain()
     # trainer.train()
-    trainer.finetune()
-    trainer.test()
+    # trainer.finetune()
+    trainer.test(is_fine_tune=False)
     # trainer.no_train()
     # trainer.test()
