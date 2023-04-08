@@ -9,17 +9,19 @@ from sklearn.metrics import classification_report, confusion_matrix
 from tensorboardX import SummaryWriter
 from torch.utils.data import dataloader
 
+from config import Args
 from model import CNN_Transformer, TIM, SET, SET_official, CNN_ML_Transformer, Transformer_TIM, MLTransformer_TIM, \
-    Transformer, CNN_Transformer_error, AT_TIM, Transformer_DeltaTIM
-from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, plot, logger, EarlyStopping,\
+    Transformer, CNN_Transformer_error, AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM
+from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, plot, logger, EarlyStopping, \
     l2_regularization, noam, IEMOCAP_LABELS, compare_key
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 class Net_Instance:
-    def __init__(self, args):
+    def __init__(self, args: Args):
         self.args = args
+        self.optimizer_type = args.optimizer_type
         self.model_type = args.model_type
         self.best_path = f"models/" + args.model_name + "_best" + ".pt"  # 模型保存路径(max val acc)
         self.last_path = f"models/" + args.model_name + ".pt"  # 模型保存路径(final)
@@ -58,6 +60,8 @@ class Net_Instance:
                 model = AT_TIM(self.args)
             elif self.model_type == "Transformer_DeltaTIM":
                 model = Transformer_DeltaTIM(self.args)
+            elif self.model_type == "AT_DeltaTIM":
+                model = AT_DeltaTIM(self.args)
             elif self.model_type == "error":
                 model = CNN_Transformer_error(self.args)
             else:
@@ -113,7 +117,19 @@ class Net_Instance:
         #     ],
         #     betas=(self.args.beta1, self.args.beta2),
         # )
-        optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, betas=(self.args.beta1, self.args.beta2))
+        # optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, betas=(self.args.beta1, self.args.beta2))
+        if self.optimizer_type == 0:
+            optimizer = torch.optim.SGD(params=model.parameters(), lr=lr, weight_decay=self.args.weight_decay)
+            # 对于SGD而言，L2正则化与weight_decay等价
+        elif self.optimizer_type == 1:
+            optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, betas=(self.args.beta1, self.args.beta2),
+                                         weight_decay=self.args.weight_decay)
+            # 对于Adam而言，L2正则化与weight_decay不等价
+        elif self.optimizer_type == 2:
+            optimizer = torch.optim.AdamW(params=model.parameters(), lr=lr, betas=(self.args.beta1, self.args.beta2),
+                                          weight_decay=self.args.weight_decay)
+        else:
+            optimizer = torch.optim.SGD(params=model.parameters(), lr=lr, weight_decay=self.args.weight_decay)
         loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=0.1)  # label_smoothing=0.1 相当于smooth_labels的功能
         early_stop = EarlyStopping(patience=5)
         if self.args.scheduler_type == 1:
@@ -152,7 +168,7 @@ class Net_Instance:
                     output = model(bx, mask)
                 else:
                     output = model(bx)
-                loss = loss_fn(output, by) + l2_regularization(model, weight_decay)
+                loss = loss_fn(output, by)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()

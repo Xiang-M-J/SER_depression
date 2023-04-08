@@ -7,7 +7,7 @@ from ADDA import Encoder
 args = Args()
 spilt_rate = [0.7, 0.2, 0.1]  # 训练集、验证集、测试集分割比例
 # seed_everything(args.random_seed)
-model_type = 'CNN_ML_Transformer'
+model_type = 'AT_DeltaTIM'
 dataset_name = "MODMA"
 args.model_type = model_type
 args.dataset_name = dataset_name

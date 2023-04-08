@@ -17,12 +17,13 @@ import argparse
 class Args:
     def __init__(self,
                  epochs=100,
-                 lr=6e-4,
+                 lr=3e-4,
                  batch_size=64,
                  spilt_rate=None,
                  weight_decay=0.1,
                  pretrain_model_path="pretrain_model.pt",
                  smooth=True,
+                 optimizer_type=2,
                  beta1=0.93,
                  beta2=0.98,
                  random_seed=34,
@@ -31,7 +32,7 @@ class Args:
                  dataset_name="MODMA",
                  save=False,
                  augment=False,
-                 scheduler_type=2,
+                 scheduler_type=1,
                  gamma=0.3,
                  step_size=30,
                  warmup=400,
@@ -56,6 +57,7 @@ class Args:
                  ):
         """
         Args:
+            optimizer_type: 优化器种类(0: SGD, 1:Adam, 2:AdamW)
             beta1: adam优化器参数
             beta2: adam优化器参数
             random_seed: 随机数种子
@@ -68,6 +70,7 @@ class Args:
             warmup: Warm scheduler参数
             mode: ['train', 'test', 'pretrain']
             is_weight: 是否对不同dilation的层进行加权融合
+
         """
         if spilt_rate is None:
             spilt_rate = [0.8, 0.1, 0.1]
@@ -79,6 +82,7 @@ class Args:
         self.batch_size = batch_size
         self.spilt_rate = spilt_rate
         self.weight_decay = weight_decay
+        self.optimizer_type = optimizer_type
         self.smooth = smooth
         self.beta1 = beta1
         self.beta2 = beta2

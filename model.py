@@ -14,6 +14,7 @@ class TIM(nn.Module):
     """
     基准网络
     """
+
     def __init__(self, args: Args):
         super(TIM, self).__init__()
         self.name = "TIM"
@@ -32,6 +33,7 @@ class TIM(nn.Module):
 
 class CNN_Transformer(nn.Module):  # input shape: [N, C, L]
     """落后版本的模型，将自己写的Transformer换成官方的Transformer后也能在迭代一段时候后稳定大概91%"""
+
     def __init__(self, args: Args):
         super(CNN_Transformer, self).__init__()
         self.name = "CNN_Transformer"
@@ -68,6 +70,7 @@ class CNN_Transformer_error(nn.Module):  # input shape: [N, C, L]
     """
     自己写的TransformerEncoder不太好使
     """
+
     def __init__(self, args: Args):
         super(CNN_Transformer_error, self).__init__()
         # self.plus_scores = args.plus_scores
@@ -99,6 +102,7 @@ class CNN_ML_Transformer(nn.Module):
     """
     换了官方的Transformer后，模型性能一个字拉，要靠warmup才能勉强跑出比较好看的成绩，也不容易收敛(100次还是波动幅度大)
     """
+
     def __init__(self, args: Args):
         super(CNN_ML_Transformer, self).__init__()
         self.name = "CNN_ML_Transformer"
@@ -149,6 +153,7 @@ class Transformer_TIM(nn.Module):
     """
     两种改进型（AT_TIM, Transformer_DeltaTIM）的原始模型
     """
+
     def __init__(self, args: Args):
         super(Transformer_TIM, self).__init__()
         self.name = "Transformer_TIM"
@@ -196,6 +201,7 @@ class TIM_Attention(nn.Module):
     """
     TIM网络的注意力机制
     """
+
     def __init__(self, args: Args):
         super(TIM_Attention, self).__init__()
         self.Wq = nn.Sequential(
@@ -248,6 +254,7 @@ class AT_TIM(nn.Module):
     """
     基于注意力机制的TIM，用注意力机制取代了weight layer，也可以取代Transformer
     """
+
     def __init__(self, args: Args):
         super(AT_TIM, self).__init__()
         self.name = "AT_TIM"
@@ -303,6 +310,7 @@ class Prepare(nn.Module):
     """
     mfcc -> Transformer
     """
+
     def __init__(self, args: Args, hidden_dim=128):
         super(Prepare, self).__init__()
 
@@ -323,6 +331,7 @@ class Middle(nn.Module):
     """
     Transformer -> TIM
     """
+
     def __init__(self, args: Args):
         super(Middle, self).__init__()
         self.rearrange = Rearrange("N L C -> N C L")
@@ -337,6 +346,7 @@ class Transformer_DeltaTIM(nn.Module):
     """
     Transformer + 差分TIM（用后一级的TAB输出减去前一级的TAB输出，共7个差分再加上最后一级的TAB输出共计8个送入weight layer）
     """
+
     def __init__(self, args: Args):
         super(Transformer_DeltaTIM, self).__init__()
         self.name = "Transformer_DeltaTIM"
@@ -401,10 +411,65 @@ class Transformer_DeltaTIM(nn.Module):
         return x
 
 
+class AT_DeltaTIM(nn.Module):
+    """
+    基于注意力的差分TIM
+    """
+    def __init__(self, args: Args):
+        super(AT_DeltaTIM, self).__init__()
+        self.name = "AT_DeltaTIM"
+        self.dilation_layer = nn.ModuleList([])
+        self.conv = (nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1,
+                               padding=0))
+        if args.dilation is None:
+            args.dilation = 8
+        for i in [2 ** i for i in range(args.dilation)]:
+            self.dilation_layer.append(
+                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
+                                     dilation=i, dropout=args.drop_rate)
+            )
+        self.drop = nn.Dropout(p=args.drop_rate)
+
+        self.attn = TIM_Attention(args)
+        self.classifier = nn.Sequential(
+            # nn.AdaptiveAvgPool2d((args.seq_len, 1)),
+            # Rearrange("N C L H -> N C (L H)"),
+            # nn.AdaptiveAvgPool1d(1),
+            nn.Linear(in_features=args.filters * args.dilation, out_features=1),
+            nn.Dropout(0.1),
+            Rearrange('N C L -> N (C L)'),
+            nn.Linear(in_features=args.seq_len, out_features=args.num_class)
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        skip_stack = None
+        delta_stack = None
+        skip_out = x
+        for layer in self.dilation_layer:
+            skip_out = layer(skip_out)
+            if skip_stack is None:
+                skip_stack = skip_out.unsqueeze(0)
+            else:
+                skip_stack = torch.cat((skip_stack, skip_out.unsqueeze(0)), dim=0)
+        for i in range(len(skip_stack) - 1):
+            if delta_stack is None:
+                skip_temp = skip_stack[i + 1] - skip_stack[i]
+                delta_stack = skip_temp.unsqueeze(-1)
+            else:
+                skip_temp = skip_stack[i + 1] - skip_stack[i]
+                delta_stack = torch.cat((delta_stack, skip_temp.unsqueeze(-1)), dim=-1)
+        delta_stack = torch.cat([delta_stack, skip_out.unsqueeze(-1)], dim=-1)
+        x = self.attn(delta_stack)
+        x = self.classifier(x)
+        return x
+
+
 class Transformer(nn.Module):
     """
     基准网络测试
     """
+
     def __init__(self, args: Args):
         super(Transformer, self).__init__()
         self.name = "Transformer"
@@ -446,6 +511,7 @@ class MLTransformer_TIM(nn.Module):
     """
     可能由于Transformer的层数不深，导致ML(multi level)的意义不大
     """
+
     def __init__(self, args: Args):
         super(MLTransformer_TIM, self).__init__()
         self.name = "MLTransformer_TIM"
@@ -500,6 +566,7 @@ class SET(nn.Module):
     """
     SET (我的版本 简化版本)
     """
+
     def __init__(self, args: Args):
         super(SET, self).__init__()
         self.name = "SET"
@@ -548,6 +615,7 @@ class convBlock(nn.Module):
     """
     speech emotion Transformer（论文版本）中的卷积块
     """
+
     def __init__(self, in_dim, out_dim, pool_size, kernel_size=3):
         super(convBlock, self).__init__()
         self.block = nn.Sequential(
@@ -564,6 +632,7 @@ class SET_official(nn.Module):
     """
     speech emotion Transformer（论文版本）
     """
+
     def __init__(self, args: Args):
         super(SET_official, self).__init__()
         self.name = "SET_official"
@@ -621,7 +690,7 @@ if __name__ == "__main__":
     # print(nn.Embedding(10, args.feature_dim)(input_).shape)
     # y, scores = model(x)
     # print(y.shape, scores.shape)
-    model = Transformer_DeltaTIM(args).cuda()
+    model = AT_DeltaTIM(args).cuda()
     x = torch.rand([4, 39, 313]).cuda()
     y = model(x)
     print(y.shape)
