@@ -720,12 +720,13 @@ def no_repeat_column(X):
 def multiGMM(path, K, n_components, save_path: str):
     data = np.load(path, allow_pickle=True).item()
     x = data['x']
+    y = data['y']
     sample_num = x.shape[0]
     feature_dim = x.shape[1]
     new_x = np.zeros([sample_num, feature_dim, n_components])
     for s in tqdm(range(sample_num)):
         X = x[s].T
-        if no_repeat_column(X)+1 > n_components:
+        if no_repeat_column(X) + 1 > n_components:
             label2index = mGMM(X=X, K=K, n_components=n_components)
             label2index = np.array(label2index).flatten()
             label2index_dict = Counter(label2index)
@@ -739,8 +740,38 @@ def multiGMM(path, K, n_components, save_path: str):
                 np.save("temp.npy", new_x)
         else:
             new_x[s, :, :] = x[s, :, :n_components]
-    np.save(save_path, new_x)
+    new_data = {'x': new_x.astype(np.float32), 'y': y}
+    np.save(save_path, new_data)
     return new_x
+
+
+def process_MODMA(path: str, duration=10, threshold=1, overlap=2.5, new_wavs_path="MODMA_Plus"):
+    """
+    处理MODMA
+    """
+    wav_dict = get_file_dict(path=path)
+    sample_wav = wav_dict[list(wav_dict.keys())[0]][0]
+    _, sr = librosa.load(sample_wav, sr=None)
+    expect_length = sr * duration
+    for key in (wav_dict.keys()):
+        print(f"process: {key}")
+        for wav in tqdm(wav_dict[key]):
+            data, sr = torchaudio.load(wav)
+            actual_length = data.shape[1]
+            if actual_length <= expect_length:
+                data = torch.cat([data, torch.zeros([1, expect_length - actual_length])], dim=1)
+                new_path = new_wavs_path + wav[wav.find('/'):]
+                if not os.path.exists(new_path[:new_path.rfind('/')]):
+                    os.makedirs(new_path[:new_path.rfind('/')])
+                torchaudio.save(new_path, torch.Tensor(data), sample_rate=16000)  # 无损
+
+            elif actual_length > expect_length:
+                data, split_num = wav_split_overlap(data, sr, threshold, duration, overlap)
+                for i in range(data.shape[0]):
+                    new_path = new_wavs_path + wav[wav.find('/'):][:-4] + f"_{i}.wav"
+                    if not os.path.exists(new_path[:new_path.rfind('/')]):
+                        os.makedirs(new_path[:new_path.rfind('/')])
+                    torchaudio.save(new_path, torch.Tensor(data[i]).unsqueeze(0), sample_rate=16000)
 
 
 if __name__ == "__main__":
@@ -750,6 +781,6 @@ if __name__ == "__main__":
     # get_MODMA_extra(path="data/MODMA_V2_order3.npy")
     # load_MultiDataset_V1("MODMA", frame_length=0.05, code=MODMA_code, duration=10, resample_rate=16000, threshold=1,
     #                      extra=True, order=3, overlap=2.5)
-    # multiGMM("data/MODMA_V1_order3.npy", 8, n_components=100, save_path="data/MODMA_V1_order3_cluster.npy")
-    load_MultiDataset_V1("datasets/RAVDESS_", code=RAVDESS_code_, duration=6, overlap=1.5)
+    multiGMM("data/MODMA_V1_order3.npy", 8, n_components=88, save_path="data/MODMA_V1_order3_c_8_88.npy")
+    # load_MultiDataset_V1("datasets/RAVDESS_", code=RAVDESS_code_, duration=6, overlap=1.5)
     pass
