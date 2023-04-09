@@ -451,7 +451,10 @@ class AT_DeltaTIM(nn.Module):
             skip_out = now_skip_out
         delta_stack.append(now_skip_out)
         delta_stack = torch.stack(delta_stack, dim=-1)
-        x = self.attn(delta_stack, mask)
+        if mask is not None:
+            x = self.attn(delta_stack, mask)
+        else:
+            x = self.attn(delta_stack)
         x = self.classifier(x)
         return x
 

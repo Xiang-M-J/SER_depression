@@ -20,8 +20,9 @@ CNN_Transformer和CNN_ML_Transformer直接扑街，SET和SET_official的验证�
 |        |      |        |          |               |      |      |      |      |      |
 |        |      |        |          |               |      |      |      |      |      |
 
-
 降低初始学习率会让模型稳定，但是准确率下降，增加初始学习率会让模型波动幅度变大，但是能达到更高的准确率
 Transformer_DeltaTIM可以更快地收敛到最高的值
 如果使用高斯混合聚类对特征进行聚类，学习率要调得大一点，并且用8个高斯混合聚类模型的效果可能比用12个的效果好
-用Transformer_DeltaTIM训练IEMOCAP数据集时，最后好像会失败
+用Transformer_DeltaTIM训练IEMOCAP数据集时，要用比较小的学习率如1e-4，并且scheduler的step_size改小一点(20)，gamma改大一点(0.4)，同时加上正则化(0.3),dropout(0.2)
+
+使用IEMOCAP的预训练模型，微调transformer部分，最后能达到训练集100%，验证集99.275%， 测试集99.719%，感觉差别不大，效果不明显。

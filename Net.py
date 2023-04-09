@@ -89,7 +89,7 @@ class Net_Instance:
         # train_num = len(train_loader.dataset)  # 当数据增强时这样能得到正确的训练集数量
         train_num = len(train_dataset)
         val_num = len(val_dataset)
-
+        pretrain_name = ['prepare', 'generalFeatureExtractor']
         if self.args.load_weight:
             if self.args.mode != "train":
                 print(f"only load pretrain weight in train mode, but now is {self.args.mode} mode")
@@ -98,14 +98,17 @@ class Net_Instance:
                 model_dict = model.state_dict()
                 pretrain_model = torch.load(self.args.pretrain_model_path)
                 pretrain_model_dict = pretrain_model.state_dict().items()
-                tgt_key = list(model_dict)[0]
-                src_key = list(pretrain_model_dict)[0][0]
-                src_key, tgt_key = compare_key(src_key, tgt_key)
-                pretrained_dict = {k.replace(src_key, tgt_key): v
-                                   for k, v in pretrain_model_dict
-                                   if k.replace(src_key, tgt_key) in model_dict}
-                model_dict.update(pretrained_dict)
-                model.load_state_dict(model_dict)
+                for k, v in pretrain_model_dict:
+                    if k.split('.')[0] in pretrain_name:
+                        model_dict.update({k: v})
+                # tgt_key = list(model_dict)[0]
+                # src_key = list(pretrain_model_dict)[0][0]
+                # src_key, tgt_key = compare_key(src_key, tgt_key)
+                # pretrained_dict = {k.replace(src_key, tgt_key): v
+                #                    for k, v in pretrain_model_dict
+                #                    if k.replace(src_key, tgt_key) in model_dict}
+                # model_dict.update(pretrained_dict)
+                # model.load_state_dict(model_dict)
         # fine_tune_lr_layers = list(map(id, model.generalFeatureExtractor.parameters()))
         # lr_layers = filter(lambda p: id(p) not in fine_tune_lr_layers, model.parameters())
         # for name, param in model.generalFeatureExtractor.named_parameters():
