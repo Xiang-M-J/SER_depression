@@ -7,7 +7,7 @@ from CNN import CausalConv, WeightLayer, Temporal_Aware_Block
 from Transformer import PositionEncoding, Encoder
 from TransformerEncoder import TransformerEncoder, TransformerEncoderLayer
 from config import Args
-from utils import cal_seq_len
+from utils import cal_seq_len, seed_everything
 
 
 class TIM(nn.Module):
@@ -85,7 +85,7 @@ class CNN_Transformer_error(nn.Module):  # input shape: [N, C, L]
         self.Classifier = nn.Sequential(
             Rearrange('N L C -> N C L'),
             nn.Linear(in_features=cal_seq_len(args.seq_len, 2), out_features=1),
-            nn.Dropout(0.2),
+            # nn.Dropout(0.2),
             Rearrange('N C L -> N (C L)'),
             nn.Linear(in_features=args.d_model, out_features=args.num_class),
         )
@@ -237,13 +237,15 @@ class TIM_Attention(nn.Module):
             nn.ReLU()
         )
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         query = self.Wq(x)
         key = self.Wk(x)
         value = self.Wv(x)
         attn = torch.matmul(query, key.transpose(-1, -2)) / (np.sqrt(self.d_model))
         attn = torch.softmax(attn, dim=-1)
         attn = self.dropout(attn)
+        # if mask is not None:
+        #     attn.masked_fill_(mask, 1e-9)  # optional
         score = torch.matmul(attn, value)
         score = self.norm(self.score_flatten(score) + self.x_flatten(x))
         score = self.norm(self.fc(score) + score)
@@ -282,7 +284,7 @@ class AT_TIM(nn.Module):
             nn.Linear(in_features=args.seq_len, out_features=args.num_class)
         )
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         x_f = x
         x_b = torch.flip(x, dims=[-1])
         x_f = self.conv(x_f)
@@ -300,7 +302,10 @@ class AT_TIM(nn.Module):
             else:
                 skip_stack = torch.cat((skip_stack, skip_temp), dim=-1)
                 # skip_stack shape: [batch_size, feature_dim, seq_len, dilation]
-        x = self.attn(skip_stack)
+        if mask is not None:
+            x = self.attn(skip_stack, mask)
+        else:
+            x = self.attn(skip_stack)
         # x = self.weight(x)
         x = self.classifier(x)
         return x
@@ -388,24 +393,16 @@ class Transformer_DeltaTIM(nn.Module):
             x = self.generalFeatureExtractor(x)
         x = self.middle(x)
         x = self.conv(x)
-        skip_stack = None
-        delta_stack = None
-        skip_out = x
+        delta_stack = []
+        skip_out = None
+        now_skip_out = x
         for layer in self.dilation_layer:
-            skip_out = layer(skip_out)
-            if skip_stack is None:
-                skip_stack = skip_out.unsqueeze(0)
-            else:
-                skip_stack = torch.cat((skip_stack, skip_out.unsqueeze(0)), dim=0)
-        for i in range(len(skip_stack) - 1):
-            if delta_stack is None:
-                skip_temp = skip_stack[i + 1] - skip_stack[i]
-                delta_stack = skip_temp.unsqueeze(-1)
-            else:
-                skip_temp = skip_stack[i + 1] - skip_stack[i]
-                delta_stack = torch.cat((delta_stack, skip_temp.unsqueeze(-1)), dim=-1)
-        delta_stack = torch.cat([delta_stack, skip_out.unsqueeze(-1)], dim=-1)
-        # delta_stack = torch.cat([delta_stack, skip_stack.permute(1, 2, 3, 0)], dim=-1)
+            now_skip_out = layer(now_skip_out)
+            if skip_out is not None:
+                delta_stack.append(now_skip_out - skip_out)
+            skip_out = now_skip_out
+        delta_stack.append(now_skip_out)
+        delta_stack = torch.stack(delta_stack, dim=-1)
         x = self.weight(delta_stack)
         x = self.Classifier(x)
         return x
@@ -415,6 +412,7 @@ class AT_DeltaTIM(nn.Module):
     """
     基于注意力的差分TIM
     """
+
     def __init__(self, args: Args):
         super(AT_DeltaTIM, self).__init__()
         self.name = "AT_DeltaTIM"
@@ -441,26 +439,19 @@ class AT_DeltaTIM(nn.Module):
             nn.Linear(in_features=args.seq_len, out_features=args.num_class)
         )
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         x = self.conv(x)
-        skip_stack = None
-        delta_stack = None
-        skip_out = x
+        delta_stack = []
+        skip_out = None
+        now_skip_out = x
         for layer in self.dilation_layer:
-            skip_out = layer(skip_out)
-            if skip_stack is None:
-                skip_stack = skip_out.unsqueeze(0)
-            else:
-                skip_stack = torch.cat((skip_stack, skip_out.unsqueeze(0)), dim=0)
-        for i in range(len(skip_stack) - 1):
-            if delta_stack is None:
-                skip_temp = skip_stack[i + 1] - skip_stack[i]
-                delta_stack = skip_temp.unsqueeze(-1)
-            else:
-                skip_temp = skip_stack[i + 1] - skip_stack[i]
-                delta_stack = torch.cat((delta_stack, skip_temp.unsqueeze(-1)), dim=-1)
-        delta_stack = torch.cat([delta_stack, skip_out.unsqueeze(-1)], dim=-1)
-        x = self.attn(delta_stack)
+            now_skip_out = layer(now_skip_out)
+            if skip_out is not None:
+                delta_stack.append(now_skip_out - skip_out)
+            skip_out = now_skip_out
+        delta_stack.append(now_skip_out)
+        delta_stack = torch.stack(delta_stack, dim=-1)
+        x = self.attn(delta_stack, mask)
         x = self.classifier(x)
         return x
 
@@ -690,8 +681,14 @@ if __name__ == "__main__":
     # print(nn.Embedding(10, args.feature_dim)(input_).shape)
     # y, scores = model(x)
     # print(y.shape, scores.shape)
-    model = AT_DeltaTIM(args).cuda()
-    x = torch.rand([4, 39, 313]).cuda()
-    y = model(x)
-    print(y.shape)
+    # model = AT_DeltaTIM(args).cuda()
+    # x = torch.rand([4, 39, 313]).cuda()
+    # y = model(x)
+    # print(y.shape)
+    seed_everything(34)
+    x = torch.rand([16, 39, 313]).cuda()
+    model = Transformer_DeltaTIM(args).cuda()
+    y1 = model(x, index=0)
+    y2 = model(x, index=1)
+    print(torch.sum(torch.abs(y1 - y2)))
     pass

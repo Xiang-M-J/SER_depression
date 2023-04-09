@@ -62,7 +62,7 @@ class Net_Instance:
                 model = Transformer_DeltaTIM(self.args)
             elif self.model_type == "AT_DeltaTIM":
                 model = AT_DeltaTIM(self.args)
-            elif self.model_type == "error":
+            elif self.model_type == "CNN_Transformer_error":
                 model = CNN_Transformer_error(self.args)
             else:
                 raise NotImplementedError
@@ -201,7 +201,10 @@ class Net_Instance:
             plt.clf()
             plt.plot(metric.train_acc)
             plt.plot(metric.val_acc)
+            plt.ylabel("accuracy(%)")
+            plt.xlabel("epoch")
             plt.legend(["train acc", "val acc"])
+            plt.title("train accuracy and validation accuracy")
             plt.pause(0.02)
             plt.ioff()  # 关闭画图的窗口
 

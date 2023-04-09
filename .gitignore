@@ -16,3 +16,4 @@ ser_pretrain/models
 .idea
 *.svg
 *.txt
+*.pyc

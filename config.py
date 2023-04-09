@@ -33,7 +33,7 @@ class Args:
                  save=False,
                  augment=False,
                  scheduler_type=1,
-                 gamma=0.3,
+                 gamma=0.2,
                  step_size=30,
                  warmup=400,
                  initial_lr=0.05,

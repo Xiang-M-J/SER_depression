@@ -87,8 +87,8 @@ class DotScore(nn.Module):
         """
         qk = torch.matmul(q, k.transpose(-1, -2)) / np.sqrt(self.d_model)  # Matmul, Scale
         # qk shape: [batch_size, n_head, seq_len, seq_len]
-        if attn_mask is not None:
-            qk.masked_fill_(attn_mask, 1e-9)  # optional
+        # if attn_mask is not None:
+        #     qk.masked_fill_(attn_mask, 1e-9)  # optional
         attn = self.softmax(qk)
         score = torch.matmul(attn, v)
         return score, attn
