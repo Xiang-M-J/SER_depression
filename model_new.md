@@ -26,3 +26,5 @@ Transformer_DeltaTIM可以更快地收敛到最高的值
 用Transformer_DeltaTIM训练IEMOCAP数据集时，要用比较小的学习率如1e-4，并且scheduler的step_size改小一点(20)，gamma改大一点(0.4)，同时加上正则化(0.3),dropout(0.2)
 
 使用IEMOCAP的预训练模型，微调transformer部分，最后能达到训练集100%，验证集99.275%， 测试集99.719%，感觉差别不大，效果不明显。
+
+后面尝试将BN换成LN，将Transformer中的Relu换成Gelu

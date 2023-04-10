@@ -13,7 +13,7 @@ from config import Args
 from model import CNN_Transformer, TIM, SET, SET_official, CNN_ML_Transformer, Transformer_TIM, MLTransformer_TIM, \
     Transformer, CNN_Transformer_error, AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM
 from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, plot, logger, EarlyStopping, \
-    l2_regularization, noam, IEMOCAP_LABELS, compare_key
+    l2_regularization, noam, IEMOCAP_LABELS, compare_key, NoamScheduler
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -32,40 +32,61 @@ class Net_Instance:
             date = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
             self.writer = SummaryWriter("runs/" + date)
 
+    def get_optimizer(self, parameter, lr):
+        if self.optimizer_type == 0:
+            optimizer = torch.optim.SGD(params=parameter, lr=lr, weight_decay=self.args.weight_decay)
+            # 对于SGD而言，L2正则化与weight_decay等价
+        elif self.optimizer_type == 1:
+            optimizer = torch.optim.Adam(params=parameter, lr=lr, betas=(self.args.beta1, self.args.beta2),
+                                         weight_decay=self.args.weight_decay)
+            # 对于Adam而言，L2正则化与weight_decay不等价
+        elif self.optimizer_type == 2:
+            optimizer = torch.optim.AdamW(params=parameter, lr=lr, betas=(self.args.beta1, self.args.beta2),
+                                          weight_decay=self.args.weight_decay)
+        else:
+            raise NotImplementedError
+        return optimizer
+
+    def get_scheduler(self, optimizer, arg: Args):
+        if arg.scheduler_type == 0:
+            return None
+        elif arg.scheduler_type == 1:
+            return torch.optim.lr_scheduler.StepLR(optimizer, arg.step_size, arg.gamma)
+        elif arg.scheduler_type == 2:
+            return NoamScheduler(optimizer, arg.d_model, arg.initial_lr, arg.warmup)
+        elif arg.scheduler_type == 3:
+            return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=arg.epochs, eta_min=1e-6)
+        else:
+            raise NotImplementedError
+
     def train(self, train_dataset, val_dataset, batch_size: int, epochs: int, lr: float, weight_decay: float,
               is_mask=False):
-
-        if self.args.mode == "pretrain":
-            # model = TIM(self.args)
+        if self.model_type == "CNN_Transformer":
             model = CNN_Transformer(self.args)
-            # print(model.name)
+        elif self.model_type == "TIM":
+            model = TIM(self.args)
+        elif self.model_type == "SET":
+            model = SET(self.args)
+        elif self.model_type == "SET_official":
+            model = SET_official(self.args)
+        elif self.model_type == "CNN_ML_Transformer":
+            model = CNN_ML_Transformer(self.args)
+        elif self.model_type == "Transformer_TIM":
+            model = Transformer_TIM(self.args)
+        elif self.model_type == "MLTransformer_TIM":
+            model = MLTransformer_TIM(self.args)
+        elif self.model_type == "Transformer":
+            model = Transformer(self.args)
+        elif self.model_type == "AT_TIM":
+            model = AT_TIM(self.args)
+        elif self.model_type == "Transformer_DeltaTIM":
+            model = Transformer_DeltaTIM(self.args)
+        elif self.model_type == "AT_DeltaTIM":
+            model = AT_DeltaTIM(self.args)
+        elif self.model_type == "CNN_Transformer_error":
+            model = CNN_Transformer_error(self.args)
         else:
-            if self.model_type == "CNN_Transformer":
-                model = CNN_Transformer(self.args)
-            elif self.model_type == "TIM":
-                model = TIM(self.args)
-            elif self.model_type == "SET":
-                model = SET(self.args)
-            elif self.model_type == "SET_official":
-                model = SET_official(self.args)
-            elif self.model_type == "CNN_ML_Transformer":
-                model = CNN_ML_Transformer(self.args)
-            elif self.model_type == "Transformer_TIM":
-                model = Transformer_TIM(self.args)
-            elif self.model_type == "MLTransformer_TIM":
-                model = MLTransformer_TIM(self.args)
-            elif self.model_type == "Transformer":
-                model = Transformer(self.args)
-            elif self.model_type == "AT_TIM":
-                model = AT_TIM(self.args)
-            elif self.model_type == "Transformer_DeltaTIM":
-                model = Transformer_DeltaTIM(self.args)
-            elif self.model_type == "AT_DeltaTIM":
-                model = AT_DeltaTIM(self.args)
-            elif self.model_type == "CNN_Transformer_error":
-                model = CNN_Transformer_error(self.args)
-            else:
-                raise NotImplementedError
+            raise NotImplementedError
 
         if self.args.save:
             # wandb.init(
@@ -101,6 +122,15 @@ class Net_Instance:
                 for k, v in pretrain_model_dict:
                     if k.split('.')[0] in pretrain_name:
                         model_dict.update({k: v})
+                model.load_state_dict(model_dict)
+                parameter = []
+                for name, param in model.named_parameters():
+                    if name.split('.')[0] in pretrain_name:
+                        # param.requires_grad = False
+                        parameter.append({'params': param, 'lr': 0.2 * lr})
+                    else:
+                        parameter.append({"params": param, "lr": lr})
+                optimizer = self.get_optimizer(parameter, lr)
                 # tgt_key = list(model_dict)[0]
                 # src_key = list(pretrain_model_dict)[0][0]
                 # src_key, tgt_key = compare_key(src_key, tgt_key)
@@ -108,36 +138,12 @@ class Net_Instance:
                 #                    for k, v in pretrain_model_dict
                 #                    if k.replace(src_key, tgt_key) in model_dict}
                 # model_dict.update(pretrained_dict)
-                # model.load_state_dict(model_dict)
-        # fine_tune_lr_layers = list(map(id, model.generalFeatureExtractor.parameters()))
-        # lr_layers = filter(lambda p: id(p) not in fine_tune_lr_layers, model.parameters())
-        # for name, param in model.generalFeatureExtractor.named_parameters():
-        #     param.requires_grad = False
-        # optimizer = torch.optim.Adam(
-        #     [
-        #         # {'params': model.generalFeatureExtractor.parameters(), 'lr': 0.2*lr},
-        #         {'params': lr_layers, 'lr': lr},
-        #     ],
-        #     betas=(self.args.beta1, self.args.beta2),
-        # )
-        # optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, betas=(self.args.beta1, self.args.beta2))
-        if self.optimizer_type == 0:
-            optimizer = torch.optim.SGD(params=model.parameters(), lr=lr, weight_decay=self.args.weight_decay)
-            # 对于SGD而言，L2正则化与weight_decay等价
-        elif self.optimizer_type == 1:
-            optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, betas=(self.args.beta1, self.args.beta2),
-                                         weight_decay=self.args.weight_decay)
-            # 对于Adam而言，L2正则化与weight_decay不等价
-        elif self.optimizer_type == 2:
-            optimizer = torch.optim.AdamW(params=model.parameters(), lr=lr, betas=(self.args.beta1, self.args.beta2),
-                                          weight_decay=self.args.weight_decay)
         else:
-            optimizer = torch.optim.SGD(params=model.parameters(), lr=lr, weight_decay=self.args.weight_decay)
+            optimizer = self.get_optimizer(model.parameters(), lr)
+
         loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=0.1)  # label_smoothing=0.1 相当于smooth_labels的功能
         early_stop = EarlyStopping(patience=5)
-        if self.args.scheduler_type == 1:
-            scheduler = torch.optim.lr_scheduler.StepLR(
-                optimizer, step_size=self.args.step_size, gamma=self.args.gamma, last_epoch=-1)
+        scheduler = self.get_scheduler(optimizer, arg=self.args)
 
         if is_mask:
             train_indices = train_dataset.indices
@@ -159,10 +165,6 @@ class Net_Instance:
             val_correct = 0
             val_loss = 0
             for step, (bx, by) in enumerate(train_loader):
-                if self.args.scheduler_type == 2:
-                    for p in optimizer.param_groups:
-                        p['lr'] = self.args.initial_lr * noam(d_model=self.args.d_model,
-                                                              step=steps + 1, warmup=self.args.warmup)
                 if torch.cuda.is_available():
                     bx = bx.cuda()
                     by = by.cuda()
@@ -193,7 +195,11 @@ class Net_Instance:
                     loss = loss_fn(output, vy)
                     val_correct += accuracy_cal(output, vy)
                     val_loss += loss.data.item()
-            if self.args.scheduler_type == 1:
+            if self.args.scheduler_type == 0:
+                pass
+            elif self.args.scheduler_type == 2:
+                scheduler.step(steps)
+            else:
                 scheduler.step()
 
             metric.train_acc.append(float(train_correct * 100) / train_num)
@@ -261,7 +267,6 @@ class Net_Instance:
             else:
                 self.writer.add_graph(model, [dummy_input, mask])
             self.logger.train(train_metric=metric)
-        # return metric
 
     def test(self, test_dataset, batch_size: int, model_path: str = None):
         if model_path is None:
@@ -321,4 +326,3 @@ class Net_Instance:
             self.writer.add_text("classification report", report)
             self.logger.test(test_metric=metric)
             np.save(self.result_path + "data/" + self.args.model_name + "_test_metric.npy", metric.item())
-        # return metric

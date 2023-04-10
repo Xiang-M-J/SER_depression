@@ -64,11 +64,11 @@ class Args:
             data_type: 数据类型
             save: 是否保存模型和结果
             augment: 是否启用增强
-            scheduler_type: scheduler类型 [0:None, 1:'LR', 2:'Warmup']
+            scheduler_type: scheduler类型 [0:None, 1:'LR', 2:'Noam', 3:'cosine']
             gamma: LR scheduler参数
             step_size: LR scheduler参数
             warmup: Warm scheduler参数
-            mode: ['train', 'test', 'pretrain']
+            mode: ['train', 'test']
             is_weight: 是否对不同dilation的层进行加权融合
 
         """

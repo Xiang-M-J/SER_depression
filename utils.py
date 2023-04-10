@@ -375,6 +375,7 @@ class myWavLoader(dataset.Dataset):
     """
     直接加载音频原始数据作为输入（wav2vec2, hubert）
     """
+
     def __init__(self, files, duration=10) -> None:
         super(myWavLoader, self).__init__()
         self.files = files
@@ -406,6 +407,7 @@ class Metric:
     """
     存储模型训练和测试时的指标
     """
+
     def __init__(self, mode="train"):
         if mode == "train":
             self.mode = "train"
@@ -575,6 +577,7 @@ class logger:
     """
     日志记录（仅作为参考，更多的时候看Tensorboard中的记录）
     """
+
     def __init__(self, model_name: str, addition: str, filename: str = "log.txt"):
         self.model_name = model_name
         self.addition = addition
@@ -672,6 +675,23 @@ def noam(d_model, step, warmup):
     return fact * (d_model ** (-0.5))
 
 
+class NoamScheduler:
+    def __init__(self, optimizer, d_model, initial_lr, warmup):
+        self.optimizer = optimizer
+        self.d_model = d_model
+        self.initial_lr = initial_lr
+        self.warmup = warmup
+        self.lr = 0
+
+    def step(self, steps):
+        self.lr = self.initial_lr * noam(d_model=self.d_model, step=steps + 1, warmup=self.warmup)
+        for param_groups in self.optimizer.param_groups:
+            param_groups['lr'] = self.lr
+
+    def get_lr(self):
+        return self.lr
+
+
 def plot_noam(args: Args):
     """
     绘制noam scheduler的学习率变化曲线
@@ -694,6 +714,7 @@ class WarmupScheduler:
     """
     用在Transformer的训练中，主要用在CNN_ML_Transformer中
     """
+
     def __init__(self, optimizer, n_step, warmup, d_model, initial_lr):
         self.optimizer = optimizer
         self.n_step = n_step
