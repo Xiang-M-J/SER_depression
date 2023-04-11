@@ -42,3 +42,23 @@ TIM中残差连接用的是相乘的方式，该方式会影响到验证集上�
 对于TAB使用1x1卷积+2x2卷积+1x1卷积代替两个2x2卷积，性能会有一定的衰减（大概2%），但会会比较稳定。
 
 AT_DeltaTIM_v2相较于AT_DeltaTIM性能更好一点
+
+使用AFT local attention准确率波动幅度大（一开始很不稳定，后面（60个epoch）还行），但是性能还可以。加大weight decay对系统没有明显的效果。
+
+对于所有的TIM变种网络，将原来的1x1卷积加上BatchNorm和Relu会稳定特别多
+
+```python
+nn.Sequential(
+            nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, 		  kernel_size=1, dilation=1, padding=0),
+            nn.BatchNorm1d(args.filters),
+            nn.ReLU()
+        )
+```
+
+不加ReLu也行，性能可能会更好一点，但是比加ReLu会稍微不稳定一些。
+
+如果不加BatchNorm，会和原来一样不稳定
+
+当mask的概率为0.2时会一定程度上提高网络性能（不到0.6%），并且有一点点不稳（该结论有待商榷）
+
+AT_TIM的效果比AT_DeltaTIM的效果好......将dilation从8改到6也可以

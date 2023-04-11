@@ -583,6 +583,7 @@ class LayerNorm1d(nn.Module):
     )
     输入格式 [N C L]
     """
+
     def __init__(self, num_channels: int, eps: float = 1e-6) -> None:
         super().__init__()
         self.weight = nn.Parameter(torch.ones(num_channels))
@@ -803,6 +804,21 @@ def log_model(model, val_acc):
             # f.write(f'-->grad_requires:{params.requires_grad}')
             f.write(f'-->grad_value:{params.grad} \n')
             f.write("===\n")
+
+
+def mask_input(x, p):
+    """
+    对输入进行遮盖
+
+    Args:
+        x: 输入特征
+        p: 遮盖概率
+    """
+    batch_size, _, seq_len = x.shape
+    mask = torch.rand(batch_size, 1, seq_len).to(x.device)
+    mask = mask.ge(p)
+    mask_x = x * mask
+    return mask_x
 
 
 if __name__ == "__main__":

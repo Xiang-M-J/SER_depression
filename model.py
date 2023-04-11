@@ -3,11 +3,10 @@ import torch
 import torch.nn as nn
 from einops.layers.torch import Rearrange
 
-from CNN import CausalConv, WeightLayer, Temporal_Aware_Block
-from Transformer import PositionEncoding, Encoder
+from CNN import WeightLayer, Temporal_Aware_Block
 from TransformerEncoder import TransformerEncoder, TransformerEncoderLayer
 from config import Args
-from utils import cal_seq_len, seed_everything
+from utils import seed_everything, mask_input
 
 
 class TIM_Attention(nn.Module):
@@ -74,8 +73,11 @@ class AT_TIM(nn.Module):
         super(AT_TIM, self).__init__()
         self.name = "AT_TIM"
         self.dilation_layer = nn.ModuleList([])
-        self.conv = (nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1,
-                               padding=0))
+        self.conv = nn.Sequential(
+            nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1, padding=0),
+            nn.BatchNorm1d(args.filters),
+            nn.ReLU()
+        )
         if args.dilation is None:
             args.dilation = 8
         for i in [2 ** i for i in range(args.dilation)]:
@@ -230,8 +232,11 @@ class AT_DeltaTIM(nn.Module):
         super(AT_DeltaTIM, self).__init__()
         self.name = "AT_DeltaTIM"
         self.dilation_layer = nn.ModuleList([])
-        self.conv = (nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1,
-                               padding=0))
+        self.conv = nn.Sequential(
+            nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1, padding=0),
+            nn.BatchNorm1d(args.filters),
+            nn.ReLU()
+        )
         if args.dilation is None:
             args.dilation = 8
         for i in [2 ** i for i in range(args.dilation)]:
@@ -281,8 +286,11 @@ class AT_DeltaTIM_v2(nn.Module):
         super(AT_DeltaTIM_v2, self).__init__()
         self.name = "AT_DeltaTIM_v2"
         self.dilation_layer = nn.ModuleList([])
-        self.conv = (nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1,
-                               padding=0))
+        self.conv = nn.Sequential(
+            nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1, padding=0),
+            nn.BatchNorm1d(args.filters),
+            nn.ReLU()
+        )
         if args.dilation is None:
             args.dilation = 8
         for i in [2 ** i for i in range(args.dilation)]:
@@ -304,11 +312,12 @@ class AT_DeltaTIM_v2(nn.Module):
         )
 
     def forward(self, x, mask=None):
+        if self.training:
+            x = mask_input(x, 0.2)
         x_f = x
         x_b = torch.flip(x, dims=[-1])
         x_f = self.conv(x_f)
         x_b = self.conv(x_b)
-        # x = self.conv(x)
         delta_stack = []
         skip_out = None
         now_skip_out_f = x_f
@@ -334,16 +343,6 @@ class AT_DeltaTIM_v2(nn.Module):
 
 if __name__ == "__main__":
     args = Args()
-    # x = torch.rand([16, 39, 313]).cuda()
-    # model = CNN_Transformer(args).cuda()
-    # input_ = torch.LongTensor([[1, 2, 4, 5, 6, 7]])
-    # print(nn.Embedding(10, args.feature_dim)(input_).shape)
-    # y, scores = model(x)
-    # print(y.shape, scores.shape)
-    # model = AT_DeltaTIM(args).cuda()
-    # x = torch.rand([4, 39, 313]).cuda()
-    # y = model(x)
-    # print(y.shape)
     seed_everything(34)
     x = torch.rand([16, 39, 313]).cuda()
     model = Transformer_DeltaTIM(args).cuda()
