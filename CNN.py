@@ -123,7 +123,10 @@ class Temporal_Aware_Block(nn.Module):
         if identity_x.shape[1] != x.shape[1]:
             identity_x = self.resample(identity_x)
         x = self.act3(x)
+        # mul不够稳定，但性能会好一点
         x = torch.mul(x, identity_x)
+        # add比较稳定，但性能会差一点
+        # x = torch.add(x, identity_x)
         return x
 
 

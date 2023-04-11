@@ -9,9 +9,10 @@ from sklearn.metrics import classification_report, confusion_matrix
 from tensorboardX import SummaryWriter
 from torch.utils.data import dataloader
 
+from baseline import CNN_Transformer, TIM, SET, SET_official, CNN_ML_Transformer, Transformer_TIM, MLTransformer_TIM, \
+    Transformer, CNN_Transformer_error
 from config import Args
-from model import CNN_Transformer, TIM, SET, SET_official, CNN_ML_Transformer, Transformer_TIM, MLTransformer_TIM, \
-    Transformer, CNN_Transformer_error, AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM
+from model import AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM, AT_DeltaTIM_v2
 from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, plot, logger, EarlyStopping, \
     l2_regularization, noam, IEMOCAP_LABELS, compare_key, NoamScheduler
 
@@ -85,6 +86,8 @@ class Net_Instance:
             model = AT_DeltaTIM(self.args)
         elif self.model_type == "CNN_Transformer_error":
             model = CNN_Transformer_error(self.args)
+        elif self.model_type == "AT_DeltaTIM_v2":
+            model = AT_DeltaTIM_v2(self.args)
         else:
             raise NotImplementedError
 

@@ -4,7 +4,7 @@ import os
 
 import torchaudio
 from transformers import Wav2Vec2Processor
-
+import torch.nn as nn
 from config import Args
 from preprocess.process_utils import MODMA_code
 import matplotlib.pyplot as plt
@@ -571,6 +571,30 @@ def plot_2(path, name: str, result_path: str = "results/", ):
     plt.ylabel("loss")
     plt.title("train loss and validation loss")
     plt.savefig(result_path + "images/" + name + "acc_and_loss.svg", dpi=dpi)
+
+
+class LayerNorm1d(nn.Module):
+    """层归一化
+    相当于 
+    nn.Sequential(
+        Rearrange("N C L -> N L C"),
+        nn.LayerNorm(39, eps=1e-6),
+        Rearrange("N L C -> N C L")
+    )
+    输入格式 [N C L]
+    """
+    def __init__(self, num_channels: int, eps: float = 1e-6) -> None:
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(num_channels))
+        self.bias = nn.Parameter(torch.zeros(num_channels))
+        self.eps = eps
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        u = x.mean(1, keepdim=True)
+        s = (x - u).pow(2).mean(1, keepdim=True)
+        x = (x - u) / torch.sqrt(s + self.eps)
+        x = self.weight[:, None] * x + self.bias[:, None]
+        return x
 
 
 class logger:
