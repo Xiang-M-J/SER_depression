@@ -1,7 +1,7 @@
 import torch.nn as nn
 from itertools import repeat
 import torch
-
+from einops.layers.torch import Rearrange
 from config import Args
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -100,13 +100,15 @@ class Temporal_Aware_Block(nn.Module):
         bn1 = nn.BatchNorm1d(filters)
         act1 = nn.ReLU()
         dropout1 = SpatialDropout(dropout)
-
+        # dropout1 = nn.Dropout(dropout)
         conv2 = (nn.Conv1d(in_channels=filters, out_channels=filters,
                            kernel_size=kernel_size, padding=padding, dilation=dilation))
         chomp2 = Chomp1d(padding)
         bn2 = nn.BatchNorm1d(filters)
+
         act2 = nn.ReLU()
         dropout2 = SpatialDropout(dropout)
+        # dropout2 = nn.Dropout(dropout)
 
         self.casual = nn.Sequential(
             conv1, chomp1, bn1, act1, dropout1, conv2, chomp2, bn2, act2, dropout2
@@ -123,10 +125,51 @@ class Temporal_Aware_Block(nn.Module):
         if identity_x.shape[1] != x.shape[1]:
             identity_x = self.resample(identity_x)
         x = self.act3(x)
-        # mul不够稳定，但性能会好一点
         x = torch.mul(x, identity_x)
-        # add比较稳定，但性能会差一点
-        # x = torch.add(x, identity_x)
+        return x
+
+
+class Temporal_Aware_Block_design(nn.Module):   # 使用优化过的TAB，效果一般，可以较为明显地减小波动幅度
+    def __init__(self, feature_dim, filters, dilation, kernel_size, dropout=0.):
+        super(Temporal_Aware_Block_design, self).__init__()
+        padding = (kernel_size - 1) * dilation
+        conv1 = (nn.Conv1d(in_channels=feature_dim, out_channels=13,
+                           kernel_size=1, dilation=dilation))
+        bn1 = nn.BatchNorm1d(13)
+        act1 = nn.ReLU()
+        dropout1 = SpatialDropout(dropout)
+        # dropout1 = nn.Dropout(dropout)
+        conv2 = (nn.Conv1d(in_channels=13, out_channels=13,
+                           kernel_size=kernel_size, padding=padding, dilation=dilation))
+        chomp2 = Chomp1d(padding)
+        bn2 = nn.BatchNorm1d(13)
+
+        act2 = nn.ReLU()
+        dropout2 = SpatialDropout(dropout)
+        # dropout2 = nn.Dropout(dropout)
+
+        conv3 = (nn.Conv1d(in_channels=13, out_channels=filters,
+                           kernel_size=1, dilation=dilation))
+        bn3 = nn.BatchNorm1d(filters)
+        act3 = nn.ReLU()
+        dropout3 = SpatialDropout(dropout)
+
+        self.casual = nn.Sequential(
+            conv1, bn1, act1, dropout1, conv2, chomp2, bn2, act2, dropout2, conv3, bn3, act3, dropout3,
+        ).to(device)
+        # self.casual = nn.Sequential(
+        #     conv1, chomp1, bn1, act1, conv2, chomp2, bn2, act2,
+        # ).to(device)
+        self.resample = nn.Conv1d(in_channels=feature_dim, out_channels=filters, kernel_size=1, padding="same")
+        self.act3 = nn.Sigmoid()
+
+    def forward(self, x):  # input_shape: [batch_size, feature_dim, seq_len]
+        identity_x = x
+        x = self.casual(x)
+        if identity_x.shape[1] != x.shape[1]:
+            identity_x = self.resample(identity_x)
+        x = self.act3(x)
+        x = torch.mul(x, identity_x)
         return x
 
 
@@ -145,6 +188,7 @@ class CausalConv(nn.Module):  # Conv1d Input:[batch_size, feature_dim, seq_len]
     Input: [batch_size, feature_dim, seq_len] \n
     Output: [batch_size, filters, seq_len]
     """
+
     def __init__(self, arg: Args()):
         super(CausalConv, self).__init__()
 
@@ -188,7 +232,7 @@ class CausalConv(nn.Module):  # Conv1d Input:[batch_size, feature_dim, seq_len]
             # skip_stack = self.drop(skip_stack)
             skip_stack = self.weight(skip_stack)
             skip_stack = skip_stack.squeeze(-1)
-        else:   # v2 不加weight layer
+        else:  # v2 不加weight layer
             for layer in self.dilation_layer:
                 skip_out_f = layer(skip_out_f)
                 skip_out_b = layer(skip_out_b)

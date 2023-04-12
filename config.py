@@ -17,11 +17,12 @@ import argparse
 class Args:
     def __init__(self,
                  epochs=100,
-                 lr=3e-4,
+                 lr=4e-4,
                  batch_size=64,
                  spilt_rate=None,
-                 weight_decay=0.1,
-                 pretrain_model_path="pretrain_model.pt",
+                 weight_decay=0.2,
+                 attention_type='MH',
+                 pretrain_model_path="iemocap_pretrain.pt",
                  smooth=True,
                  optimizer_type=2,
                  beta1=0.93,
@@ -33,7 +34,7 @@ class Args:
                  save=False,
                  augment=False,
                  scheduler_type=1,
-                 gamma=0.2,
+                 gamma=0.3,
                  step_size=30,
                  warmup=400,
                  initial_lr=0.05,
@@ -42,8 +43,9 @@ class Args:
                  filters=39,
                  kernel_size=2,
                  drop_rate=0.1,
-                 dilation=8,
+                 dilation=6,
                  is_weight=True,
+                 is_cluster=False,
                  is_mask=False,
                  d_model=256,
                  n_head=8,
@@ -51,7 +53,7 @@ class Args:
                  dim_feed_forward=1024,
                  d_qkv=64,
                  seq_len=313,
-                 num_class=2,
+                 num_class=6,
                  mode="train",
                  load_weight=False,
                  ):
@@ -70,6 +72,7 @@ class Args:
             warmup: Warm scheduler参数
             mode: ['train', 'test']
             is_weight: 是否对不同dilation的层进行加权融合
+            attention_type: 注意力机制的形式['MH':多头注意力, 'AF': attention free ]
 
         """
         if spilt_rate is None:
@@ -97,11 +100,11 @@ class Args:
         self.warmup = warmup
         self.initial_lr = initial_lr
         self.load_weight = load_weight
-
+        self.is_cluster = is_cluster
         self.dataset_name = dataset_name
         self.order = order
         self.version = version
-
+        self.attention_type = attention_type
         # Transformer begin
         self.is_mask = is_mask
         self.d_model = d_model

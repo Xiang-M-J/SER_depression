@@ -12,9 +12,9 @@ from torch.utils.data import dataloader
 from baseline import CNN_Transformer, TIM, SET, SET_official, CNN_ML_Transformer, Transformer_TIM, MLTransformer_TIM, \
     Transformer, CNN_Transformer_error
 from config import Args
-from model import AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM, AT_DeltaTIM_v2
+from model import AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM, AT_DeltaTIM_v2, AT_TIM_v2, AT_TIM_v3
 from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, plot, logger, EarlyStopping, \
-    l2_regularization, noam, IEMOCAP_LABELS, compare_key, NoamScheduler
+    IEMOCAP_LABELS, NoamScheduler
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -88,6 +88,10 @@ class Net_Instance:
             model = CNN_Transformer_error(self.args)
         elif self.model_type == "AT_DeltaTIM_v2":
             model = AT_DeltaTIM_v2(self.args)
+        elif self.model_type == "AT_TIM_v2":
+            model = AT_TIM_v2(self.args)
+        elif self.model_type == "AT_TIM_v3":
+            model = AT_TIM_v3(self.args)
         else:
             raise NotImplementedError
 
@@ -113,7 +117,7 @@ class Net_Instance:
         # train_num = len(train_loader.dataset)  # 当数据增强时这样能得到正确的训练集数量
         train_num = len(train_dataset)
         val_num = len(val_dataset)
-        pretrain_name = ['prepare', 'generalFeatureExtractor']
+
         if self.args.load_weight:
             if self.args.mode != "train":
                 print(f"only load pretrain weight in train mode, but now is {self.args.mode} mode")
@@ -122,18 +126,49 @@ class Net_Instance:
                 model_dict = model.state_dict()
                 pretrain_model = torch.load(self.args.pretrain_model_path)
                 pretrain_model_dict = pretrain_model.state_dict().items()
+                # 对于Transformer_DeltaTIM
+                # pretrain_name = ['prepare', 'generalFeatureExtractor']
+                #
+                # for k, v in pretrain_model_dict:
+                #     if k.split('.')[0] in pretrain_name:
+                #         model_dict.update({k: v})
+                # model.load_state_dict(model_dict)
+                # parameter = []
+                # for name, param in model.named_parameters():
+                #     if name.split('.')[0] in pretrain_name:
+                #         # param.requires_grad = False
+                #         parameter.append({'params': param, 'lr': 0.2 * lr})
+                #     else:
+                #         parameter.append({"params": param, "lr": lr})
+                # optimizer = self.get_optimizer(parameter, lr)
+
+                # 对于AT_DeltaTIM
+                pretrain_name = ['dilation_layer']
+
                 for k, v in pretrain_model_dict:
                     if k.split('.')[0] in pretrain_name:
-                        model_dict.update({k: v})
+                        # param.requires_grad = False
+                        if int(k.split('.')[1]) < 4:
+                            model_dict.update({k: v})
+
                 model.load_state_dict(model_dict)
                 parameter = []
                 for name, param in model.named_parameters():
                     if name.split('.')[0] in pretrain_name:
                         # param.requires_grad = False
-                        parameter.append({'params': param, 'lr': 0.2 * lr})
+                        if int(name.split('.')[1]) < 4:
+                            parameter.append({'params': param, 'lr': 0.2 * lr})
+                        else:
+                            parameter.append({'params': param, 'lr': lr})
                     else:
                         parameter.append({"params": param, "lr": lr})
+
+                # parameter.append({'params': model.dilation_layer[:4].parameters(), 'lr': 0.2*lr})
+                # parameter.append({'params': model.dilation_layer[4:].parameters(), 'lr': lr})
+
                 optimizer = self.get_optimizer(parameter, lr)
+
+                # 其它
                 # tgt_key = list(model_dict)[0]
                 # src_key = list(pretrain_model_dict)[0][0]
                 # src_key, tgt_key = compare_key(src_key, tgt_key)
@@ -145,7 +180,7 @@ class Net_Instance:
             optimizer = self.get_optimizer(model.parameters(), lr)
 
         loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=0.1)  # label_smoothing=0.1 相当于smooth_labels的功能
-        early_stop = EarlyStopping(patience=5)
+        early_stop = EarlyStopping(patience=10)
         scheduler = self.get_scheduler(optimizer, arg=self.args)
 
         if is_mask:
@@ -236,6 +271,7 @@ class Net_Instance:
                 'Epoch :{}\t train Loss:{:.4f}\t train Accuracy:{:.3f}\t val Loss:{:.4f} \t val Accuracy:{:.3f}'.format(
                     epoch + 1, metric.train_loss[-1], metric.train_acc[-1], metric.val_loss[-1],
                     metric.val_acc[-1]))
+            print(optimizer.param_groups[0]['lr'])
             if metric.val_acc[-1] > best_val_accuracy:
                 print(f"val_accuracy improved from {best_val_accuracy} to {metric.val_acc[-1]}")
                 best_val_accuracy = metric.val_acc[-1]
