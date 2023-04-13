@@ -21,7 +21,7 @@ class Args:
                  batch_size=64,
                  spilt_rate=None,
                  weight_decay=0.2,
-                 attention_type='MH',
+                 attention_type='AF',
                  pretrain_model_path="iemocap_pretrain.pt",
                  smooth=True,
                  optimizer_type=2,

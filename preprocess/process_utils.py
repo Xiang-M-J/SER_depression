@@ -782,5 +782,5 @@ if __name__ == "__main__":
     # load_MultiDataset_V1("MODMA", frame_length=0.05, code=MODMA_code, duration=10, resample_rate=16000, threshold=1,
     #                      extra=True, order=3, overlap=2.5)
     # multiGMM("data/MODMA_V1_order3.npy", 6, n_components=100, save_path="data/MODMA_V1_order3_c_6.npy")
-    load_MultiDataset_V1("datasets/IEMOCAP", code=IEMOCAP_code, duration=10, overlap=2.5)
+    # load_MultiDataset_V1("datasets/IEMOCAP", code=IEMOCAP_code, duration=10, overlap=2.5)
     pass

@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from einops.layers.torch import Rearrange
 
-from CNN import WeightLayer, Temporal_Aware_Block, Temporal_Aware_Block_design
+from CNN import WeightLayer, Temporal_Aware_Block, Temporal_Aware_Block_design, Chomp1d, SpatialDropout
 from TransformerEncoder import TransformerEncoder, TransformerEncoderLayer
 from config import Args
 from utils import seed_everything, mask_input
@@ -533,12 +533,136 @@ class AT_DeltaTIM_v2(nn.Module):
         return x
 
 
+class TAB(nn.Module):
+    def __init__(self, args: Args, num_layer: int, middle: bool = True):
+        super(TAB, self).__init__()
+        self.net = nn.ModuleList([])
+        for i in [2 ** i for i in range(num_layer)]:
+            self.net.append(
+                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
+                                     dilation=i, dropout=args.drop_rate)
+            )
+        args.dilation = num_layer
+        self.attn = attention(args)
+        self.proj = nn.Sequential(
+            nn.Linear(args.dilation * args.filters, args.filters),
+            Rearrange("N L C -> N C L"),
+        ) if middle else None
+
+    def forward(self, x, mask=None):
+        stack_layer = []
+        for layer in self.net:
+            x = layer(x)
+            stack_layer.append(x)
+        stack_layer = torch.stack(stack_layer, dim=-1)
+        if mask is not None:
+            x = self.attn(stack_layer, mask)
+        else:
+            x = self.attn(stack_layer)
+        if self.proj is not None:
+            x = self.proj(x)
+        return x
+
+
+class TAB_ADD(nn.Module):
+    def __init__(self, args: Args, num_layer: int, middle: bool = True):
+        super(TAB_ADD, self).__init__()
+        self.net = nn.ModuleList([])
+        for i in [2 ** i for i in range(num_layer)]:
+            self.net.append(
+                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
+                                     dilation=i, dropout=args.drop_rate)
+            )
+        args.dilation = num_layer
+        self.attn = attention(args)
+        self.proj = nn.Sequential(
+            nn.Linear(args.dilation * args.filters, args.filters),
+            Rearrange("N L C -> N C L"),
+        ) if middle else None
+
+    def forward(self, x_f, x_b, mask=None):
+        stack_layer = []
+        for layer in self.net:
+            x_f = layer(x_f)
+            x_b = layer(x_b)
+            tmp = torch.add(x_f, x_b)
+            stack_layer.append(tmp)
+        stack_layer = torch.stack(stack_layer, dim=-1)
+        if mask is not None:
+            x = self.attn(stack_layer, mask)
+        else:
+            x = self.attn(stack_layer)
+        if self.proj is not None:
+            x = self.proj(x)
+        return x
+
+
+class TAB_DIFF(nn.Module):
+    def __init__(self, args: Args, num_layer: int, middle: bool = True):
+        super(TAB_DIFF, self).__init__()
+        self.net = nn.ModuleList([])
+        for i in [2 ** i for i in range(num_layer)]:
+            self.net.append(
+                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
+                                     dilation=i, dropout=args.drop_rate)
+            )
+        args.dilation = num_layer
+        self.attn = attention(args)
+        self.proj = nn.Sequential(
+            nn.Linear(args.dilation * args.filters, args.filters),
+            Rearrange("N L C -> N C L"),
+        ) if middle else None
+
+    def forward(self, x, mask=None):
+        stack_layer = []
+        last_x = None
+        for layer in self.net:
+            x = layer(x)
+            if last_x is not None:
+                stack_layer.append(x - last_x)
+            last_x = x
+        stack_layer.append(x)
+        stack_layer = torch.stack(stack_layer, dim=-1)
+        if mask is not None:
+            x = self.attn(stack_layer, mask)
+        else:
+            x = self.attn(stack_layer)
+        if self.proj is not None:
+            x = self.proj(x)
+        return x
+
+
+class MultiTIM(nn.Module):
+    def __init__(self, args: Args):
+        super(MultiTIM, self).__init__()
+        self.prepare = nn.Sequential(
+            nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1, padding=0),
+            nn.BatchNorm1d(args.filters),
+            nn.ReLU(),
+        )
+        self.generalExtractor = TAB(args, num_layer=4)
+        self.specialExtractor = TAB_DIFF(args, num_layer=4, middle=False)
+        self.classifier = self.classifier = nn.Sequential(
+            nn.Linear(in_features=args.filters * args.dilation, out_features=1),
+            nn.Dropout(0.3),
+            Rearrange('N C L -> N (C L)'),
+            nn.Linear(in_features=args.seq_len, out_features=args.num_class)
+        )
+
+    def forward(self, x, mask=None):
+        x = self.prepare(x)
+        x = self.generalExtractor(x, mask)
+        x = self.specialExtractor(x, mask)
+        x = self.classifier(x)
+        return x
+
+
 if __name__ == "__main__":
     args = Args()
     seed_everything(34)
     x = torch.rand([16, 39, 313]).cuda()
-    model = Transformer_DeltaTIM(args).cuda()
-    y1 = model(x, index=0)
-    y2 = model(x, index=1)
-    print(torch.sum(torch.abs(y1 - y2)))
+    model = MultiTIM(args).cuda()
+    y1 = model(x)
+    # y2 = model(x, index=1)
+    # print(torch.sum(torch.abs(y1 - y2)))
     pass

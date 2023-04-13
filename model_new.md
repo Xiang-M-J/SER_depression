@@ -62,3 +62,5 @@ nn.Sequential(
 当mask的概率为0.2时会一定程度上提高网络性能（不到0.6%），并且有一点点不稳（该结论有待商榷）
 
 AT_TIM的效果比AT_DeltaTIM的效果好......将dilation从8改到6也可以
+
+将Temporal_Aware_Block中的torch.mul换成torch.add后效果挺不错了的。

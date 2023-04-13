@@ -8,11 +8,11 @@ args = Args()
 spilt_rate = [0.7, 0.2, 0.1]  # 训练集、验证集、测试集分割比例
 # seed_everything(args.random_seed)
 model_type = 'Transformer_DeltaTIM'
-dataset_name = "MODMA"
+dataset_name = "IEMOCAP"
 args.model_type = model_type
 args.dataset_name = dataset_name
 args.spilt_rate = spilt_rate
-
+args.num_class = 2
 # args.pretrain_model_path = "models/ADDA/tgt_encoder_best.pt"
 if __name__ == "__main__":
     print("dataset name: ", args.dataset_name)
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     if option == '' or option == 'y' or option == 'yes' or option is None:
         args.model_name = model_name
         train_dataset, val_dataset, test_dataset = load_dataset(
-            dataset_name, spilt_rate, args.random_seed, order=args.order, version="V1")
+            dataset_name, spilt_rate, args.random_seed, order=args.order, version="V2")
         instance = Net_Instance(args)
         instance.train(train_dataset, val_dataset, args.batch_size, args.epochs, args.lr, args.weight_decay,
                        is_mask=False)

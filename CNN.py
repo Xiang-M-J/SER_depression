@@ -125,7 +125,7 @@ class Temporal_Aware_Block(nn.Module):
         if identity_x.shape[1] != x.shape[1]:
             identity_x = self.resample(identity_x)
         x = self.act3(x)
-        x = torch.mul(x, identity_x)
+        x = torch.add(x, identity_x)
         return x
 
 
