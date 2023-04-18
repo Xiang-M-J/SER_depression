@@ -12,7 +12,7 @@ from torch.utils.data import dataloader
 from baseline import CNN_Transformer, TIM, SET, SET_official, CNN_ML_Transformer, Transformer_TIM, MLTransformer_TIM, \
     Transformer, CNN_Transformer_error
 from config import Args
-from model import AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM, AT_DeltaTIM_v2, AT_TIM_v2, AT_TIM_v3
+from model import AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM, AT_DeltaTIM_v2, AT_TIM_v2, AT_TIM_v3, MultiTIM
 from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, plot, logger, EarlyStopping, \
     IEMOCAP_LABELS, NoamScheduler
 
@@ -92,6 +92,8 @@ class Net_Instance:
             model = AT_TIM_v2(self.args)
         elif self.model_type == "AT_TIM_v3":
             model = AT_TIM_v3(self.args)
+        elif self.model_type == "MultiTIM":
+            model = MultiTIM(self.args)
         else:
             raise NotImplementedError
 

@@ -822,8 +822,11 @@ def mask_input(x, p):
 
 
 if __name__ == "__main__":
-    # plot_2("results/data/train_drop1_mfcc_smoothTrue_epoch80_l2re1_lr0002_pretrainTrue_train_metric.npy",
-    #        "pretrain_True1")
-    args = Args()
-    plot_noam(args=args)
+    # plot_2(r"D:\graduate_code\SER_depression\stores\results\data\MultiTIM_train_ADD_DIFF_MODMA_order3_drop1_mfcc_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse_train_metric.npy", "MultiTIM_MODMA")
+    # args = Args()
+    # plot_noam(args=args)
+    data = np.load(r"D:\graduate_code\SER_depression\stores\results\data\MultiTIM_train_ADD_DIFF_MODMA_order3_drop1_mfcc_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse_train_metric.npy", allow_pickle=True).item()
+    # x = data['x']
+    # print(x)
+    print()
     pass
