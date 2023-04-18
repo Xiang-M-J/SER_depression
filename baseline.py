@@ -1,13 +1,12 @@
 import torch
 import torch.nn as nn
 from einops.layers.torch import Rearrange
-
-from CNN import CausalConv, WeightLayer
-from Transformer import PositionEncoding, Encoder
-from TransformerEncoder import TransformerEncoder, TransformerEncoderLayer
-from config import Args
 from torch.nn.utils import weight_norm
 
+from CNN import CausalConv, WeightLayer
+from Transformer import PositionEncoding
+from TransformerEncoder import TransformerEncoder, TransformerEncoderLayer
+from config import Args
 from utils import cal_seq_len
 
 
@@ -29,124 +28,6 @@ class TIM(nn.Module):
     def forward(self, x):
         x = self.extractor(x)
         x = self.classifier(x)
-        return x
-
-
-class CNN_Transformer(nn.Module):  # input shape: [N, C, L]
-    """落后版本的模型，将自己写的Transformer换成官方的Transformer后也能在迭代一段时候后稳定大概91%"""
-
-    def __init__(self, args: Args):
-        super(CNN_Transformer, self).__init__()
-        self.name = "CNN_Transformer"
-        self.generalFeatureExtractor = CausalConv(args)
-        self.middle = nn.Sequential(
-            nn.MaxPool1d(2),
-            nn.Conv1d(in_channels=args.filters, out_channels=args.d_model, kernel_size=1, padding="same"),
-            Rearrange("N C L -> N L C")
-        )
-        encoderLayer = TransformerEncoderLayer(args.d_model, args.n_head, args.d_ff, args.drop_rate,
-                                               batch_first=True)
-        self.specificFeatureExtractor = TransformerEncoder(
-            encoderLayer, num_layers=args.n_layer
-        )
-        self.Classifier = nn.Sequential(
-            Rearrange('N L C -> N C L'),
-            nn.Linear(in_features=cal_seq_len(args.seq_len, 2), out_features=1),
-            Rearrange('N C L -> N (C L)'),
-            nn.Linear(in_features=args.d_model, out_features=args.num_class),
-        )
-
-    def forward(self, x, mask=None):
-        x = self.generalFeatureExtractor(x)
-        x = self.middle(x)
-        if mask is not None:
-            x = self.specificFeatureExtractor(x, mask)
-        else:
-            x = self.specificFeatureExtractor(x)
-        x = self.Classifier(x)
-        return x
-
-
-class CNN_Transformer_error(nn.Module):  # input shape: [N, C, L]
-    """
-    自己写的TransformerEncoder不太好使
-    """
-
-    def __init__(self, args: Args):
-        super(CNN_Transformer_error, self).__init__()
-        # self.plus_scores = args.plus_scores
-        self.generalFeatureExtractor = CausalConv(args)
-        self.middle = nn.Sequential(
-            nn.MaxPool1d(2),
-            nn.Conv1d(in_channels=args.filters, out_channels=args.d_model, kernel_size=1, padding="same")
-        )
-
-        self.specificFeatureExtractor = Encoder(args.d_model, args.n_head, args.d_qkv, args.d_qkv, args.d_qkv,
-                                                args.d_ff, args.n_layer)
-        self.Classifier = nn.Sequential(
-            Rearrange('N L C -> N C L'),
-            nn.Linear(in_features=cal_seq_len(args.seq_len, 2), out_features=1),
-            nn.Dropout(0.2),
-            Rearrange('N C L -> N (C L)'),
-            nn.Linear(in_features=args.d_model, out_features=args.num_class),
-        )
-
-    def forward(self, x):
-        x = self.generalFeatureExtractor(x)
-        x = self.middle(x)
-        x, _ = self.specificFeatureExtractor(x)
-        x = self.Classifier(x)
-        return x
-
-
-class CNN_ML_Transformer(nn.Module):
-    """
-    换了官方的Transformer后，模型性能一个字拉，要靠warmup才能勉强跑出比较好看的成绩，也不容易收敛(100次还是波动幅度大)
-    """
-
-    def __init__(self, args: Args):
-        super(CNN_ML_Transformer, self).__init__()
-        self.name = "CNN_ML_Transformer"
-        self.generalFeatureExtractor = CausalConv(args)
-        self.middle = nn.Sequential(
-            nn.MaxPool1d(2),
-            nn.Conv1d(in_channels=args.filters, out_channels=args.d_model, kernel_size=1, padding="same")
-        )
-        self.position_encoding = nn.Sequential(
-            Rearrange("N C L -> N L C"),
-            PositionEncoding(args.d_model)
-        )
-        self.specificFeatureExtractor = nn.ModuleList([])
-
-        for i in range(args.n_layer):
-            self.specificFeatureExtractor.append(
-                TransformerEncoderLayer(args.d_model, args.n_head, args.d_ff, args.drop_rate,
-                                        batch_first=True)
-            )
-        self.weight = WeightLayer(args.n_layer)
-        self.Classifier = nn.Sequential(
-            Rearrange('N L C W -> N C (L W)'),
-            nn.Linear(in_features=cal_seq_len(args.seq_len, 2), out_features=1),
-            Rearrange('N C L -> N (C L)'),
-            nn.Linear(in_features=args.d_model, out_features=args.num_class),
-        )
-
-    def forward(self, x, mask=None):
-        x = self.generalFeatureExtractor(x)
-        x = self.middle(x)
-        x = self.position_encoding(x)
-        multi_layer = None
-        for layer in self.specificFeatureExtractor:
-            if mask is not None:
-                x = layer(x, mask)
-            else:
-                x = layer(x)
-            if multi_layer is None:
-                multi_layer = x.unsqueeze(-1)
-            else:
-                multi_layer = torch.cat([multi_layer, x.unsqueeze(-1)], dim=-1)
-        x = self.weight(multi_layer)
-        x = self.Classifier(x)
         return x
 
 
@@ -295,55 +176,6 @@ class Transformer(nn.Module):
         return x
 
 
-class SET(nn.Module):
-    """
-    SET (我的版本 简化版本)
-    """
-
-    def __init__(self, args: Args):
-        super(SET, self).__init__()
-        self.name = "SET"
-        self.scale_depth = nn.Conv1d(in_channels=args.feature_dim, out_channels=args.d_model, kernel_size=1)
-        self.bn = nn.BatchNorm1d(args.d_model)  # bn 可以有效加快收敛速度
-        self.position_encoding = nn.Sequential(
-            Rearrange("N C L -> N L C"),
-            PositionEncoding(args.d_model)
-        )
-        self.encoder = nn.ModuleList([])
-
-        for i in range(args.n_layer):
-            self.encoder.append(
-                TransformerEncoderLayer(args.d_model, args.n_head, args.d_ff, args.drop_rate,
-                                        batch_first=True)
-            )
-        # self.bn = nn.BatchNorm2d(args.n_layer)
-        self.weight = WeightLayer(args.n_layer)
-        self.classifier = nn.Sequential(
-            Rearrange("N L C W -> N C (L W)"),
-            nn.AdaptiveAvgPool1d(1),
-            Rearrange("N C L -> N (C L)"),
-            nn.Linear(args.d_model, args.num_class)
-        )
-
-    def forward(self, x, mask=None):
-        x = self.scale_depth(x)
-        x = self.bn(x)
-        x = self.position_encoding(x)
-        concat_layer = None
-        for layer in self.encoder:
-            if mask is not None:
-                x = layer(x, mask)
-            else:
-                x = layer(x)
-            if concat_layer is None:
-                concat_layer = x.unsqueeze(-1)
-            else:
-                concat_layer = torch.cat([concat_layer, x.unsqueeze(-1)], dim=-1)
-        x = self.weight(concat_layer)
-        x = self.classifier(x)
-        return x
-
-
 class convBlock(nn.Module):
     """
     speech emotion Transformer（论文版本）中的卷积块
@@ -361,14 +193,14 @@ class convBlock(nn.Module):
         return self.block(x)
 
 
-class SET_official(nn.Module):
+class SET(nn.Module):
     """
     speech emotion Transformer（论文版本）
     """
 
     def __init__(self, args: Args):
-        super(SET_official, self).__init__()
-        self.name = "SET_official"
+        super(SET, self).__init__()
+        self.name = "SET"
         self.scale_depth = nn.Conv1d(in_channels=args.feature_dim, out_channels=args.d_model, kernel_size=1)
         self.bn = nn.BatchNorm1d(args.d_model)  # bn 可以有效加快收敛速度
         self.position_encoding = nn.Sequential(

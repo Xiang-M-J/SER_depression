@@ -9,10 +9,9 @@ from sklearn.metrics import classification_report, confusion_matrix
 from tensorboardX import SummaryWriter
 from torch.utils.data import dataloader
 
-from baseline import CNN_Transformer, TIM, SET, SET_official, CNN_ML_Transformer, Transformer_TIM, MLTransformer_TIM, \
-    Transformer, CNN_Transformer_error, LSTM, TemporalConvNet, MLP
+from baseline import TIM, SET, Transformer_TIM, MLTransformer_TIM, Transformer, LSTM, TemporalConvNet, MLP
 from config import Args
-from model import AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM, AT_DeltaTIM_v2, AT_TIM_v2, AT_TIM_v3, MultiTIM
+from model import AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM, MultiTIM
 from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, plot, logger, EarlyStopping, \
     IEMOCAP_LABELS, NoamScheduler
 
@@ -64,16 +63,10 @@ class Net_Instance:
             raise NotImplementedError
 
     def train(self, train_dataset, val_dataset):
-        if self.model_type == "CNN_Transformer":
-            model = CNN_Transformer(self.args)
-        elif self.model_type == "TIM":
+        if self.model_type == "TIM":
             model = TIM(self.args)
         elif self.model_type == "SET":
             model = SET(self.args)
-        elif self.model_type == "SET_official":
-            model = SET_official(self.args)
-        elif self.model_type == "CNN_ML_Transformer":
-            model = CNN_ML_Transformer(self.args)
         elif self.model_type == "Transformer_TIM":
             model = Transformer_TIM(self.args)
         elif self.model_type == "MLTransformer_TIM":
@@ -86,14 +79,6 @@ class Net_Instance:
             model = Transformer_DeltaTIM(self.args)
         elif self.model_type == "AT_DeltaTIM":
             model = AT_DeltaTIM(self.args)
-        elif self.model_type == "CNN_Transformer_error":
-            model = CNN_Transformer_error(self.args)
-        elif self.model_type == "AT_DeltaTIM_v2":
-            model = AT_DeltaTIM_v2(self.args)
-        elif self.model_type == "AT_TIM_v2":
-            model = AT_TIM_v2(self.args)
-        elif self.model_type == "AT_TIM_v3":
-            model = AT_TIM_v3(self.args)
         elif self.model_type == "MultiTIM":
             model = MultiTIM(self.args)
         elif self.model_type == "MLP":

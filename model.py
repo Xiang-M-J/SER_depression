@@ -5,7 +5,7 @@ from einops.layers.torch import Rearrange
 
 from CNN import WeightLayer, Temporal_Aware_Block, Temporal_Aware_Block_simple
 from TransformerEncoder import TransformerEncoder, TransformerEncoderLayer
-from attention import MultiHeadAttention, AFTLocalAttention, get_attention
+from attention import MultiHeadAttention, AFTLocalAttention, get_attention, AFTSimpleAttention
 from Transformer import feedForward
 
 from config import Args
@@ -70,114 +70,6 @@ class AT_TIM(nn.Module):
         else:
             x = self.attn(skip_stack)
         # x = self.weight(x)
-        x = self.classifier(x)
-        return x
-
-
-class AT_TIM_v2(nn.Module):
-    """
-    基于注意力机制的TIM，用注意力机制取代了weight layer，也可以取代Transformer
-    """
-
-    def __init__(self, args: Args):
-        super(AT_TIM_v2, self).__init__()
-        self.name = "AT_TIM_v2"
-        self.dilation_layer = nn.ModuleList([])
-        self.conv = nn.Sequential(
-            nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1, padding=0),
-            nn.BatchNorm1d(args.filters),
-            nn.ReLU()
-        )
-        if args.dilation is None:
-            args.dilation = 8
-        for i in [2 ** i for i in range(args.dilation)]:
-            self.dilation_layer.append(
-                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-        self.drop = nn.Dropout(p=args.drop_rate)
-        self.fusion = nn.Conv1d(in_channels=2 * args.filters, out_channels=args.filters, kernel_size=1, padding="same")
-        self.attn = get_attention(args)
-        # self.weight = WeightLayer(args.dilation)
-        self.classifier = nn.Sequential(
-            # nn.AdaptiveAvgPool2d((args.seq_len, 1)),
-            # Rearrange("N C L H -> N C (L H)"),
-            # nn.AdaptiveAvgPool1d(1),
-            nn.Linear(in_features=args.filters * args.dilation, out_features=1),
-            nn.Dropout(0.1),
-            Rearrange('N C L -> N (C L)'),
-            nn.Linear(in_features=args.seq_len, out_features=args.num_class)
-        )
-
-    def forward(self, x, mask=None):
-        x_f = x
-        x_b = torch.flip(x, dims=[-1])
-        x_f = self.conv(x_f)
-        x_b = self.conv(x_b)
-        skip_stack = []
-        skip_out_f = x_f
-        skip_out_b = x_b
-        for layer in self.dilation_layer:
-            skip_out_f = layer(skip_out_f)
-            skip_out_b = layer(skip_out_b)
-            tmp = self.fusion(torch.cat([skip_out_f, skip_out_b], dim=1))
-            skip_stack.append(tmp)
-        skip_stack = torch.stack(skip_stack, dim=-1)
-        if mask is not None:
-            x = self.attn(skip_stack, mask)
-        else:
-            x = self.attn(skip_stack)
-        x = self.classifier(x)
-        return x
-
-
-class AT_TIM_v3(nn.Module):
-    """
-    基于注意力机制的TIM，用注意力机制取代了weight layer，也可以取代Transformer
-    """
-
-    def __init__(self, args: Args):
-        super(AT_TIM_v3, self).__init__()
-        self.name = "AT_TIM_v3"
-        self.dilation_layer = nn.ModuleList([])
-        self.conv = nn.Sequential(
-            nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1, padding=0),
-            nn.BatchNorm1d(args.filters),
-            nn.ReLU()
-        )
-        if args.dilation is None:
-            args.dilation = 8
-        for i in [2 ** i for i in range(args.dilation)]:
-            self.dilation_layer.append(
-                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-        self.drop = nn.Dropout(p=args.drop_rate)
-        self.attn = get_attention(args)
-        # self.weight = WeightLayer(args.dilation)
-        self.classifier = nn.Sequential(
-            # nn.AdaptiveAvgPool2d((args.seq_len, 1)),
-            # Rearrange("N C L H -> N C (L H)"),
-            # nn.AdaptiveAvgPool1d(1),
-            nn.Linear(in_features=args.filters * args.dilation, out_features=1),
-            nn.Dropout(0.1),
-            Rearrange('N C L -> N (C L)'),
-            nn.Linear(in_features=args.seq_len, out_features=args.num_class)
-        )
-
-    def forward(self, x, mask=None):
-
-        x = self.conv(x)
-        skip_stack = []
-
-        for layer in self.dilation_layer:
-            x = layer(x)
-            skip_stack.append(x)
-        skip_stack = torch.stack(skip_stack, dim=-1)
-        if mask is not None:
-            x = self.attn(skip_stack, mask)
-        else:
-            x = self.attn(skip_stack)
         x = self.classifier(x)
         return x
 
@@ -334,130 +226,20 @@ class AT_DeltaTIM(nn.Module):
         return x
 
 
-class AT_DeltaTIM_v2(nn.Module):
-    """
-    基于注意力的差分TIM v2
-    """
-
-    def __init__(self, args: Args):
-        super(AT_DeltaTIM_v2, self).__init__()
-        self.name = "AT_DeltaTIM_v2"
-        self.dilation_layer = nn.ModuleList([])
-        self.fusion = nn.ModuleList([])
-        self.conv = nn.Sequential(
-            nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1, padding=0),
-            nn.BatchNorm1d(args.filters),
-            nn.ReLU()
-        )
-        if args.dilation is None:
-            args.dilation = 8
-        for i in [2 ** i for i in range(args.dilation)]:
-            self.dilation_layer.append(
-                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-            self.fusion.append(
-                nn.Conv1d(in_channels=2 * args.filters, out_channels=args.filters, kernel_size=1, padding="same"))
-        self.drop = nn.Dropout(p=args.drop_rate)
-        self.attn = get_attention(args)
-        self.classifier = nn.Sequential(
-            # nn.AdaptiveAvgPool2d((args.seq_len, 1)),
-            # Rearrange("N C L H -> N C (L H)"),
-            # nn.AdaptiveAvgPool1d(1),
-            nn.Linear(in_features=args.filters * args.dilation, out_features=1),
-            nn.Dropout(0.3),
-            Rearrange('N C L -> N (C L)'),
-            nn.Linear(in_features=args.seq_len, out_features=args.num_class)
-        )
-
-    def forward(self, x, mask=None):
-        if self.training:
-            x = mask_input(x, 0.2)
-        x_f = x
-        x_b = torch.flip(x, dims=[-1])
-        x_f = self.conv(x_f)
-        x_b = self.conv(x_b)
-        delta_stack = []
-        skip_out = None
-        now_skip_out_f = x_f
-        now_skip_out_b = x_b
-        now_skip_out = None
-        for i, layer in enumerate(self.dilation_layer):
-            now_skip_out_f = layer(now_skip_out_f)
-            now_skip_out_b = layer(now_skip_out_b)
-            now_skip_out = self.fusion[i](torch.cat([now_skip_out_f, now_skip_out_b], dim=1))
-            if skip_out is not None:
-                delta_stack.append(now_skip_out - skip_out)
-            skip_out = now_skip_out
-
-        delta_stack.append(now_skip_out)
-        delta_stack = torch.stack(delta_stack, dim=-1)
-        if mask is not None:
-            x = self.attn(delta_stack, mask)
-        else:
-            x = self.attn(delta_stack)
-        x = self.classifier(x)
-        return x
-
-
-class TAB(nn.Module):
-    def __init__(self, args: Args, num_layer, index):
-        super(TAB, self).__init__()
-        self.net = nn.ModuleList([])
-        layer_begin = 0 if index == 0 else num_layer[0]
-        layer_end = num_layer[0] if index == 0 else sum(num_layer)
-        for i in [2 ** i for i in range(layer_begin, layer_end)]:
-            self.net.append(
-                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-
-    def forward(self, x):
-        stack_layer = []
-        for layer in self.net:
-            x = layer(x)
-            stack_layer.append(x)
-        stack_layer = torch.stack(stack_layer, dim=-1)
-        return stack_layer
-
-
-class TAB_ADD(nn.Module):
-    def __init__(self, args: Args, num_layer, index):
-        super(TAB_ADD, self).__init__()
-        self.net = nn.ModuleList([])
-        layer_begin = 0 if index == 0 else num_layer[0]
-        layer_end = num_layer[0] if index == 0 else sum(num_layer)
-        for i in [2 ** i for i in range(layer_begin, layer_end)]:
-            self.net.append(
-                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-
-    def forward(self, x_f, x_b):
-        stack_layer = []
-        for layer in self.net:
-            x_f = layer(x_f)
-            x_b = layer(x_b)
-            tmp = torch.add(x_f, x_b)
-            stack_layer.append(tmp)
-        stack_layer = torch.stack(stack_layer, dim=-1)
-        return stack_layer, x_f, x_b
-
-
-class TAB_Attention(nn.Module):
+class TAB_Attention_SE(nn.Module):
     """
     SE
     """
 
     def __init__(self, args: Args):
-        super(TAB_Attention, self).__init__()
+        super(TAB_Attention_SE, self).__init__()
         self.pool1 = nn.AdaptiveAvgPool1d(1)  # N C L -> N C 1
         self.pool2 = nn.AdaptiveMaxPool1d(1)
         self.channel = nn.Sequential(
-            nn.Conv1d(in_channels=args.filters, out_channels=args.filters, kernel_size=1),
+            nn.Conv1d(in_channels=128, out_channels=16, kernel_size=1),
             # nn.BatchNorm1d(args.filters),
             nn.ReLU(),
-            nn.Conv1d(in_channels=args.filters, out_channels=args.filters, kernel_size=1),
+            nn.Conv1d(in_channels=16, out_channels=128, kernel_size=1),
             # nn.BatchNorm1d(args.filters),
             nn.Sigmoid(),
         )
@@ -511,29 +293,48 @@ class TAB_Attention_AF(nn.Module):
     def __init__(self, args: Args):
         super(TAB_Attention_AF, self).__init__()
         self.in_proj = nn.Sequential(
-            nn.Conv1d(in_channels=args.filters, out_channels=256, kernel_size=1),
-            nn.ReLU(),
             Rearrange("N C L -> N L C")
         )
-        self.attn = AFTLocalAttention(256, args.seq_len, 64)
-        self.ff = feedForward(256, 1024)
+        self.attn = AFTLocalAttention(128, args.seq_len, 64)
+        # self.attn = AFTSimpleAttention(128)   # AFTLocal的效果更好
+        self.ff = feedForward(128, 1024)
         self.out_proj = nn.Sequential(
-            nn.Linear(256, args.filters),
             Rearrange("N L C -> N C L")
         )
 
     def forward(self, x, mask=None):
         x = self.in_proj(x)
         x, attn = self.attn(x, x, x, mask)
-        x = self.ff(x)
+        # x = self.ff(x)
         return self.out_proj(x)
 
 
-class TAB_AT(nn.Module):
+# 各种TAB组件
+class TAB(nn.Module):
     def __init__(self, args: Args, num_layer, index):
-        super(TAB_AT, self).__init__()
+        super(TAB, self).__init__()
         self.net = nn.ModuleList([])
-        self.attn = TAB_Attention(args)
+        layer_begin = 0 if index == 0 else num_layer[0]
+        layer_end = num_layer[0] if index == 0 else sum(num_layer)
+        for i in [2 ** i for i in range(layer_begin, layer_end)]:
+            self.net.append(
+                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
+                                     dilation=i, dropout=args.drop_rate)
+            )
+
+    def forward(self, x):
+        stack_layer = []
+        for layer in self.net:
+            x = layer(x)
+            stack_layer.append(x)
+        stack_layer = torch.stack(stack_layer, dim=-1)
+        return stack_layer
+
+
+class TAB_ADD(nn.Module):
+    def __init__(self, args: Args, num_layer, index):
+        super(TAB_ADD, self).__init__()
+        self.net = nn.ModuleList([])
         layer_begin = 0 if index == 0 else num_layer[0]
         layer_end = num_layer[0] if index == 0 else sum(num_layer)
         for i in [2 ** i for i in range(layer_begin, layer_end)]:
@@ -547,14 +348,64 @@ class TAB_AT(nn.Module):
         for layer in self.net:
             x_f = layer(x_f)
             x_b = layer(x_b)
-            tmp = x_f + x_b
-            tmp = self.attn(tmp)
+            tmp = torch.add(x_f, x_b)
             stack_layer.append(tmp)
         stack_layer = torch.stack(stack_layer, dim=-1)
         return stack_layer, x_f, x_b
 
 
+class TAB_AT(nn.Module):
+    """
+    对双向相加后的数据进行attn
+    """
+
+    def __init__(self, args: Args, num_layer, index):
+        super(TAB_AT, self).__init__()
+        self.in_proj = nn.Sequential(
+            nn.Conv1d(args.filters, 128, kernel_size=1),
+            nn.BatchNorm1d(128),
+            # nn.ReLU(),
+        )
+        self.net = nn.ModuleList([])
+        self.attn = TAB_Attention_MH(args)
+        layer_begin = 0 if index == 0 else num_layer[0]
+        layer_end = num_layer[0] if index == 0 else sum(num_layer)
+        for i in [2 ** i for i in range(layer_begin, layer_end)]:
+            self.net.append(
+                Temporal_Aware_Block(feature_dim=128, filters=128, kernel_size=args.kernel_size,
+                                     dilation=i, dropout=args.drop_rate)
+            )
+        self.out_proj1 = nn.Sequential(
+            nn.Conv1d(128, args.filters, kernel_size=1),
+            nn.BatchNorm1d(args.filters),
+            # nn.ReLU()
+        )
+        self.out_proj2 = nn.Sequential(
+            nn.Conv2d(128, args.filters, kernel_size=1),
+            nn.BatchNorm2d(args.filters),
+            # nn.ReLU()
+        )
+
+    def forward(self, x_f, x_b, mask=None):
+        stack_layer = []
+        x_f = self.in_proj(x_f)
+        x_b = self.in_proj(x_b)
+        for layer in self.net:
+            x_f = layer(x_f)
+            x_b = layer(x_b)
+            tmp = x_f + x_b
+            tmp = self.attn(tmp, mask)
+            stack_layer.append(tmp)
+        stack_layer = torch.stack(stack_layer, dim=-1)
+
+        return self.out_proj2(stack_layer), self.out_proj1(x_f), x_b
+
+
 class AT_TAB(nn.Module):
+    """
+    对单向进行attn
+    """
+
     def __init__(self, args: Args, num_layer, index):
         super(AT_TAB, self).__init__()
         self.in_proj = nn.Sequential(
