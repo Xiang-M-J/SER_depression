@@ -3,9 +3,8 @@ import torch.nn as nn
 from einops.layers.torch import Rearrange
 from torch.nn.utils import weight_norm
 
-from CNN import CausalConv, WeightLayer
-from Transformer import PositionEncoding
 from TransformerEncoder import TransformerEncoder, TransformerEncoderLayer
+from blocks import CausalConv, Chomp1d
 from config import Args
 from utils import cal_seq_len
 
@@ -247,15 +246,6 @@ class SET(nn.Module):
         return x
 
 
-class Chomp1d(nn.Module):
-    def __init__(self, chomp_size):
-        super(Chomp1d, self).__init__()
-        self.chomp_size = chomp_size
-
-    def forward(self, x):
-        return x[:, :, :-self.chomp_size].contiguous()
-
-
 class TemporalBlock(nn.Module):
     def __init__(self, n_inputs, n_outputs, kernel_size, stride, dilation, padding, dropout=0.2):
         super(TemporalBlock, self).__init__()
@@ -369,6 +359,53 @@ class MLP(nn.Module):
 
     def forward(self, x, mask=None):
         x = self.prepare(x)
+        x = self.classifier(x)
+        return x
+
+
+class CNN(nn.Module):
+    def __init__(self, arg:Args):
+        super(CNN, self).__init__()
+        self.conv1 = nn.Sequential(  # input(batch_size, feature_dim, time_step)
+            nn.Conv1d(in_channels=arg.feature_dim, out_channels=64, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(64),
+            nn.MaxPool1d(2),
+            nn.Dropout(0.1),
+            nn.ReLU(),
+        )  # output(batch_size, feature_dim, time_step/2)
+        self.conv2 = nn.Sequential(
+            nn.Conv1d(in_channels=64, out_channels=128, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(128),
+            nn.MaxPool1d(2),
+            nn.Dropout(0.1),
+            nn.ReLU(),
+        )  # output(batch_size, feature_dim, time_step/4)
+        self.conv3 = nn.Sequential(
+            nn.Conv1d(in_channels=128, out_channels=128, kernel_size=3, padding="same"),
+            nn.MaxPool1d(kernel_size=2),
+            nn.BatchNorm1d(128),
+            nn.Dropout(0.1),
+            nn.ReLU()
+        )
+        self.conv4 = nn.Sequential(
+            nn.Conv1d(in_channels=128, out_channels=256, kernel_size=3, padding="same"),
+            nn.MaxPool1d(kernel_size=2),
+            nn.BatchNorm1d(256),
+            nn.Dropout(0.1),
+            nn.ReLU()
+        )
+        self.classifier = nn.Sequential(
+            nn.AdaptiveAvgPool1d(1),
+            Rearrange("N C L -> N (C L)"),
+            nn.Linear(256, arg.num_class)
+        )
+        self.dropout = nn.Dropout(arg.drop_rate)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
         x = self.classifier(x)
         return x
 

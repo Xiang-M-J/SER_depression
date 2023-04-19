@@ -60,7 +60,8 @@ def load_dataset(dataset_name, spilt_rate, random_seed, version='V2', order=3, i
     if is_cluster:
         data = np.load(f'preprocess/data/{dataset_name}_{version}_order{order}_c_6.npy', allow_pickle=True).item()
     else:
-        data = np.load(f'D:/xmj/SER_depression/preprocess/data/{dataset_name}_{version}_order{order}.npy', allow_pickle=True).item()
+        data = np.load(f'D:/xmj/SER_depression/preprocess/data/{dataset_name}_{version}_order{order}.npy',
+                       allow_pickle=True).item()
     x = data['x'][:, :order * 13, :]
     y = data['y']
     Num = x.shape[0]  # 样本数
@@ -619,8 +620,9 @@ class logger:
         with open(self.filename, 'a') as f:
             try:
                 f.write("\n========================\t" + "test begin" + "\t========================\n")
-                f.write("test: \t\t\t" + "test loss: \t{:.4f} \t test accuracy:\t {:.3f} \n".format(test_metric.test_loss,
-                                                                                                    test_metric.test_acc))
+                f.write(
+                    "test: \t\t\t" + "test loss: \t{:.4f} \t test accuracy:\t {:.3f} \n".format(test_metric.test_loss,
+                                                                                                test_metric.test_acc))
                 f.write("confusion matrix: \n")
                 for i in range(len(test_metric.confusion_matrix)):
                     f.write(str(test_metric.confusion_matrix[i]) + '\n')
@@ -632,8 +634,9 @@ class logger:
             except TypeError:
                 f.write("\n========================\t" + "test begin" + "\t========================\n")
                 f.write(
-                    "test: \t\t\t" + "test loss: \t{:.4f} \t test accuracy:\t {:.3f} \n".format(test_metric.test_loss[0],
-                                                                                                test_metric.test_acc[0]))
+                    "test: \t\t\t" + "test loss: \t{:.4f} \t test accuracy:\t {:.3f} \n".format(
+                        test_metric.test_loss[0],
+                        test_metric.test_acc[0]))
                 f.write("confusion matrix: \n")
                 for i in range(len(test_metric.confusion_matrix[0])):
                     f.write(str(test_metric.confusion_matrix[0][i]) + '\n')
@@ -811,6 +814,56 @@ def log_model(model, val_acc):
             f.write("===\n")
 
 
+def model_structure(model_path, save_path=None):
+    """
+    查看模型结构
+    """
+    if not os.path.exists(model_path):
+        print(f"cannot find path:{model_path}")
+        return
+    model = torch.load(model_path)
+    if save_path is None:
+        save_path = model_path.split('.')[-2].split('/')[-1] + ".txt"
+    blank = ' '
+    with open(save_path, 'w') as f:
+        f.write('-' * 90 + "\n")
+        print('-' * 90)
+        f.write('|' + ' ' * 11 + 'weight name' + ' ' * 10 + '|' + ' ' * 15 + 'weight shape' + ' ' * 15 + '|' \
+                + ' ' * 3 + 'number' + ' ' * 3 + '|\n')
+        print('|' + ' ' * 11 + 'weight name' + ' ' * 10 + '|' + ' ' * 15 + 'weight shape' + ' ' * 15 + '|' \
+                + ' ' * 3 + 'number' + ' ' * 3 + '|')
+        f.write('-' * 90 + "\n")
+        print('-' * 90)
+        num_para = 0
+        type_size = 1  # 如果是浮点数就是4
+        for index, (key, w_variable) in enumerate(model.named_parameters()):
+            if len(key) <= 40:
+                key = key + (40 - len(key)) * blank
+            shape = str(w_variable.shape)
+            if len(shape) <= 30:
+                shape = shape + (30 - len(shape)) * blank
+            each_para = 1
+            for k in w_variable.shape:
+                each_para *= k
+            num_para += each_para
+            str_num = str(each_para)
+            if len(str_num) <= 10:
+                str_num = str_num + (10 - len(str_num)) * blank
+
+            f.write('| {} | {} | {} |\n'.format(key, shape, str_num))
+            print('| {} | {} | {} |'.format(key, shape, str_num))
+        f.write('-' * 90 + "\n")
+        print('-' * 90)
+        f.write('The total number of parameters: ' + str(num_para) + "\n")
+        print('The total number of parameters: ' + str(num_para))
+        f.write('The parameters of Model {}: {:4f}M \n'.format(model._get_name(), num_para * type_size / 1000 / 1000))
+        print('The parameters of Model {}: {:4f}M'.format(model._get_name(), num_para * type_size / 1000 / 1000))
+        f.write('-' * 90 + "\n")
+        print('-' * 90)
+        for name in list(model.named_modules()):
+            f.write("{}\n".format(name))
+
+
 def mask_input(x, p):
     """
     对输入进行遮盖
@@ -829,6 +882,7 @@ def mask_input(x, p):
 if __name__ == "__main__":
     # plot_2("results/data/train_drop1_mfcc_smoothTrue_epoch80_l2re1_lr0002_pretrainTrue_train_metric.npy",
     #        "pretrain_True1")
-    args = Args()
-    plot_noam(args=args)
+    # args = Args()
+    # plot_noam(args=args)
+    model_structure(model_path="models/MultiTIM_AT_DIFF_MODMA_order3_drop1_mfcc_epoch100_l2re1_lr0004_pretrainFalse_clusterFalse.pt")
     pass

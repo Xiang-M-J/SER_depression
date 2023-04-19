@@ -3,7 +3,7 @@ import math
 import numpy as np
 import torch.optim
 
-from CNN import CausalConv
+from blocks import CausalConv
 import torch.nn as nn
 from torch.autograd import Function
 from einops.layers.torch import Rearrange

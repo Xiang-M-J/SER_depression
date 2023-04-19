@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim
 from einops.layers.torch import Rearrange
 
-from CNN import CausalConv
+from blocks import CausalConv
 from config import Args
 from utils import load_loader, accuracy_cal, Metric, cal_seq_len, l2_regularization
 

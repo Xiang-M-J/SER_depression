@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from einops.layers.torch import Rearrange
 
-from CNN import WeightLayer, Temporal_Aware_Block, Temporal_Aware_Block_simple
+from blocks import WeightLayer, Temporal_Aware_Block, Temporal_Aware_Block_simple
 from TransformerEncoder import TransformerEncoder, TransformerEncoderLayer
 from attention import MultiHeadAttention, AFTLocalAttention, get_attention, AFTSimpleAttention
 from Transformer import feedForward
@@ -243,19 +243,19 @@ class TAB_Attention_SE(nn.Module):
             # nn.BatchNorm1d(args.filters),
             nn.Sigmoid(),
         )
-        self.spatial = nn.Sequential(
-            nn.Conv1d(2, 1, kernel_size=1),
-            nn.Sigmoid()
-        )
+        # self.spatial = nn.Sequential(
+        #     nn.Conv1d(2, 1, kernel_size=1),
+        #     nn.Sigmoid()
+        # )
 
     def forward(self, x, mask=None):
         attn1 = self.pool1(x)
         attn2 = self.pool2(x)
         attn = self.channel(attn1 + attn2)
         x = x * attn
-        x_compress = torch.cat([torch.max(x, 1)[0].unsqueeze(1), torch.mean(x, 1).unsqueeze(1)], dim=1)
-        attn = self.spatial(x_compress)
-        x = x * attn
+        # x_compress = torch.cat([torch.max(x, 1)[0].unsqueeze(1), torch.mean(x, 1).unsqueeze(1)], dim=1)
+        # attn = self.spatial(x_compress)
+        # x = x * attn
         return x
 
 
@@ -401,6 +401,67 @@ class TAB_AT(nn.Module):
         return self.out_proj2(stack_layer), self.out_proj1(x_f), x_b
 
 
+class TAB_Conv(nn.Module):
+    def __init__(self, args: Args, num_layer, index):
+        super(TAB_Conv, self).__init__()
+        self.net = nn.ModuleList([])
+        self.fusion = nn.ModuleList([])
+        layer_begin = 0 if index == 0 else num_layer[0]
+        layer_end = num_layer[0] if index == 0 else sum(num_layer)
+        for i in [2 ** i for i in range(layer_begin, layer_end)]:
+            self.fusion.append(
+                nn.Sequential(
+                    nn.Conv1d(in_channels=2 * args.filters, out_channels=args.filters, kernel_size=1, padding="same"),
+                    nn.BatchNorm1d(args.filters),
+                    nn.ReLU(),
+                )
+            )
+            self.net.append(
+                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
+                                     dilation=i, dropout=args.drop_rate)
+            )
+
+    def forward(self, x_f, x_b):
+        stack_layer = []
+        for i, layer in enumerate(self.net):
+            x_f = layer(x_f)
+            x_b = layer(x_b)
+            tmp = self.fusion[i](torch.cat([x_f, x_b], dim=1))
+            stack_layer.append(tmp)
+        stack_layer = torch.stack(stack_layer, dim=-1)
+        return stack_layer, x_f, x_b
+
+
+class TAB_BiDIFF(nn.Module):
+    def __init__(self, args: Args, num_layer, index):
+        super(TAB_BiDIFF, self).__init__()
+        self.net = nn.ModuleList([])
+        layer_begin = 0 if index == 0 else num_layer[0]
+        layer_end = num_layer[0] if index == 0 else sum(num_layer)
+        for i in [2 ** i for i in range(layer_begin, layer_end)]:
+            self.net.append(
+                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
+                                     dilation=i, dropout=args.drop_rate)
+            )
+
+    def forward(self, x_f, x_b):
+        stack_layer = []
+        last_x_f = None
+        last_x_b = None
+        for layer in self.net:
+            x_f = layer(x_f)
+            x_b = layer(x_b)
+            if last_x_f is not None:
+                stack_layer.append(torch.add(x_f - last_x_f, x_b - last_x_b))
+            last_x_f = x_f
+            last_x_b = x_b
+
+        stack_layer.append(x_f + x_b)
+        stack_layer = torch.stack(stack_layer, dim=-1)
+
+        return stack_layer, x_f, x_b
+
+
 class AT_TAB(nn.Module):
     """
     对单向进行attn
@@ -437,43 +498,14 @@ class AT_TAB(nn.Module):
     def forward(self, x_f, x_b, mask=None):
         stack_layer = []
         x_f = self.in_proj(x_f)
+        # x_b = self.in_proj(x_b)
         for layer in self.net:
             x_f = layer(x_f)
+            # x_b = layer(x_b)
             x_f = self.attn(x_f, mask)
             stack_layer.append(x_f)
         stack_layer = torch.stack(stack_layer, dim=-1)
         return self.out_proj2(stack_layer), self.out_proj1(x_f), x_b
-
-
-class TAB_Conv(nn.Module):
-    def __init__(self, args: Args, num_layer, index):
-        super(TAB_Conv, self).__init__()
-        self.net = nn.ModuleList([])
-        self.fusion = nn.ModuleList([])
-        layer_begin = 0 if index == 0 else num_layer[0]
-        layer_end = num_layer[0] if index == 0 else sum(num_layer)
-        for i in [2 ** i for i in range(layer_begin, layer_end)]:
-            self.fusion.append(
-                nn.Sequential(
-                    nn.Conv1d(in_channels=2 * args.filters, out_channels=args.filters, kernel_size=1, padding="same"),
-                    nn.BatchNorm1d(args.filters),
-                    nn.ReLU(),
-                )
-            )
-            self.net.append(
-                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-
-    def forward(self, x_f, x_b):
-        stack_layer = []
-        for i, layer in enumerate(self.net):
-            x_f = layer(x_f)
-            x_b = layer(x_b)
-            tmp = self.fusion[i](torch.cat([x_f, x_b], dim=1))
-            stack_layer.append(tmp)
-        stack_layer = torch.stack(stack_layer, dim=-1)
-        return stack_layer, x_f, x_b
 
 
 class TAB_DIFF(nn.Module):
@@ -484,7 +516,8 @@ class TAB_DIFF(nn.Module):
         layer_end = num_layer[0] if index == 0 else sum(num_layer)
         for i in [2 ** i for i in range(layer_begin, layer_end)]:
             self.net.append(
-                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
+                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters,
+                                     kernel_size=args.kernel_size,
                                      dilation=i, dropout=args.drop_rate)
             )
 
@@ -498,38 +531,7 @@ class TAB_DIFF(nn.Module):
             last_x = x
         stack_layer.append(x)
         stack_layer = torch.stack(stack_layer, dim=-1)
-
         return stack_layer, x
-
-
-class TAB_BiDIFF(nn.Module):
-    def __init__(self, args: Args, num_layer, index):
-        super(TAB_BiDIFF, self).__init__()
-        self.net = nn.ModuleList([])
-        layer_begin = 0 if index == 0 else num_layer[0]
-        layer_end = num_layer[0] if index == 0 else sum(num_layer)
-        for i in [2 ** i for i in range(layer_begin, layer_end)]:
-            self.net.append(
-                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-
-    def forward(self, x_f, x_b):
-        stack_layer = []
-        last_x_f = None
-        last_x_b = None
-        for layer in self.net:
-            x_f = layer(x_f)
-            x_b = layer(x_b)
-            if last_x_f is not None:
-                stack_layer.append(torch.add(x_f - last_x_f, x_b - last_x_b))
-            last_x_f = x_f
-            last_x_b = x_b
-
-        stack_layer.append(x_f + x_b)
-        stack_layer = torch.stack(stack_layer, dim=-1)
-
-        return stack_layer, x_f, x_b
 
 
 class MultiTIM(nn.Module):
@@ -547,7 +549,6 @@ class MultiTIM(nn.Module):
         if num_layers is None:
             num_layers = [3, 5]
         self.prepare = nn.Sequential(
-            # nn.BatchNorm1d(args.feature_dim),
             nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1, padding=0),
             nn.BatchNorm1d(args.filters),
             nn.ReLU(),

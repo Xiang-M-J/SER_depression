@@ -1,50 +1,13 @@
 import math
-
-import torch.nn as nn
 from itertools import repeat
+
 import torch
-from einops.layers.torch import Rearrange
-from config import Args
+import torch.nn as nn
 from torch.nn.utils import weight_norm
 
+from config import Args
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-
-class CNNNet(nn.Module):
-    def __init__(self, feature_dim=39, drop_rate=0.2, num_class=7):
-        super(CNNNet, self).__init__()
-        self.conv1 = nn.Sequential(  # input(batch_size, feature_dim, time_step)
-            nn.Conv1d(in_channels=feature_dim, out_channels=64, kernel_size=3, padding="same"),
-            nn.BatchNorm1d(64),
-            nn.Dropout(0.1),
-            nn.ReLU(),
-        )  # output(batch_size, feature_dim, time_step/2)
-        self.conv2 = nn.Sequential(
-            nn.Conv1d(in_channels=64, out_channels=64, kernel_size=3, padding="same"),
-            nn.BatchNorm1d(64),
-            nn.Dropout(0.1),
-            nn.ReLU(),
-        )  # output(batch_size, feature_dim, time_step/4)
-        # self.conv3 = nn.Sequential(
-        #     nn.Conv1d(in_channels=64, out_channels=64, kernel_size=3, padding="same"),
-        #     nn.MaxPool1d(kernel_size=2),
-        #     nn.BatchNorm1d(64),
-        #     nn.Dropout(0.2),
-        #     nn.ReLU()
-        # )
-        # self.resample = nn.Sequential(
-        #     nn.Conv1d(in_channels=feature_dim, out_channels=64, kernel_size=1, padding="same"),
-        #     nn.MaxPool1d(kernel_size=4),
-        #     nn.BatchNorm1d(64),
-        #     nn.ReLU(),
-        # )
-        self.dropout = nn.Dropout(drop_rate)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.dropout(x)
-        return x
 
 
 class Chomp1d(nn.Module):
@@ -75,7 +38,6 @@ class SpatialDropout(nn.Module):
         outputs = inputs.clone()
         if noise_shape is None:
             noise_shape = (inputs.shape[0], *repeat(1, inputs.dim() - 2), inputs.shape[-1])  # 默认沿着中间所有的shape
-
         self.noise_shape = noise_shape
         if not self.training or self.drop == 0:
             return inputs
@@ -135,7 +97,7 @@ class Temporal_Aware_Block(nn.Module):
 class Temporal_Aware_Block_simple(nn.Module):
     def __init__(self, feature_dim, filters, dilation, kernel_size, dropout=0.):
         super(Temporal_Aware_Block_simple, self).__init__()
-        padding = (3 - 1) * dilation
+        padding = (kernel_size - 1) * dilation
         self.conv1 = nn.Sequential(
             weight_norm(
                 nn.Conv1d(in_channels=feature_dim, out_channels=filters, kernel_size=1, padding=0, dilation=dilation)),
@@ -145,7 +107,7 @@ class Temporal_Aware_Block_simple(nn.Module):
         )
         self.conv2 = nn.Sequential(
             weight_norm(nn.Conv1d(in_channels=filters, out_channels=filters,
-                                  kernel_size=3, padding=padding, dilation=dilation)),
+                                  kernel_size=kernel_size, padding=padding, dilation=dilation)),
             Chomp1d(padding),
             nn.BatchNorm1d(filters),
             nn.ReLU(),

@@ -4,7 +4,7 @@ import torch.optim
 from einops.layers.torch import Rearrange
 
 from config import Args
-from model import TAB, TAB_DIFF, attention, TAB_ADD
+from model import TAB, TAB_DIFF, TAB_ADD, AT_TAB
 from utils import accuracy_cal
 
 
@@ -24,19 +24,16 @@ class Multi_model(nn.Module):
         arg.seq_len = seq_len[0]
         self.specialNet1 = nn.Sequential(
             TAB_ADD(arg, num_layer=num_layers[1]),
-            attention(arg),
             Classifier(arg, 0),
         )
         arg.seq_len = seq_len[1]
         self.specialNet2 = nn.Sequential(
             TAB_ADD(arg, num_layer=num_layers[1]),
-            attention(arg),
             Classifier(arg, 1),
         )
         arg.seq_len = seq_len[2]
         self.specialNet3 = nn.Sequential(
             TAB_ADD(arg, num_layer=num_layers[1]),
-            attention(arg),
             Classifier(arg, 2)
         )
 
@@ -82,10 +79,10 @@ class Classifier(nn.Module):
     def __init__(self, arg: Args, i: int):
         super(Classifier, self).__init__()
         self.net = nn.Sequential(  # 用于MODMA 2分类
-            Rearrange('N L C -> N C L'),
+            Rearrange('N C L H-> N C (L H)'),
             nn.AdaptiveAvgPool1d(1),
             Rearrange('N C L -> N (C L)'),
-            nn.Linear(in_features=arg.filters * arg.dilation, out_features=arg.num_class[i])
+            nn.Linear(in_features=arg.filters, out_features=arg.num_class[i])
         )
 
     def forward(self, x):
@@ -96,14 +93,18 @@ class MModel(nn.Module):
     def __init__(self, arg: Args, seq_len, index, num_layers=None):
         super(MModel, self).__init__()
         if num_layers is None:
-            num_layers = [4, 4]
+            num_layers = [3, 4]
         arg.seq_len = seq_len
         arg.dilation = num_layers[0] + num_layers[1]
         self.prepare = Prepare(arg)
-        self.shareNet = TAB_ADD(arg, num_layers[0])
+        self.shareNet = AT_TAB(arg, num_layers, index=0)
+        merge = nn.Sequential(
+            nn.Linear(arg.dilation, 1),
+            nn.Dropout(0.2)
+        )
         self.specialNet = nn.Sequential(
-            TAB_DIFF(arg, num_layer=num_layers[1]),
-            attention(arg),
+            TAB_DIFF(arg, num_layer=num_layers, index=1),
+            merge,
             Classifier(arg, index),
         )
 
@@ -125,8 +126,8 @@ class MModel(nn.Module):
         x_b = self.prepare(torch.flip(x, dims=[-1]))
         x_1, x_f, _ = self.shareNet(x_f, x_b)
         x_2, x_f = self.specialNet[0](x_f)
-        score = self.specialNet[1](torch.cat([x_1, x_2], dim=-1))
-        x = self.specialNet[2](score)
+        x = self.specialNet[1](torch.cat([x_1, x_2], dim=-1))
+        x = self.specialNet[2](x)
         loss = F.cross_entropy(x, y)
         correct_num = accuracy_cal(x, y)
         return loss, correct_num

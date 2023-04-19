@@ -18,7 +18,10 @@ args.pretrain_model_path = "models/MultiTIM_train_ADD_DIFF_IEMOCAP_order3_drop1_
 if __name__ == "__main__":
     print("dataset name: ", args.dataset_name)
     print("model type: ", args.model_type)
-    model_name = f"{model_type}_{args.multi_type}_{args.dataset_name}_order{args.order}_drop{str(args.drop_rate).split('.')[-1]}_{args.data_type}_epoch{args.epochs}_l2re{str(args.weight_decay).split('.')[-1]}_lr{str(args.lr).split('.')[-1]}_pretrain{args.load_weight}_cluster{args.is_cluster}"
+    if model_type == "MultiTIM":
+        model_name = f"{model_type}_{args.multi_type}_{args.dataset_name}_order{args.order}_drop{str(args.drop_rate).split('.')[-1]}_{args.data_type}_epoch{args.epochs}_l2re{str(args.weight_decay).split('.')[-1]}_lr{str(args.lr).split('.')[-1]}_pretrain{args.load_weight}_cluster{args.is_cluster}"
+    else:
+        model_name = f"{model_type}_{args.dataset_name}_order{args.order}_drop{str(args.drop_rate).split('.')[-1]}_{args.data_type}_epoch{args.epochs}_l2re{str(args.weight_decay).split('.')[-1]}_lr{str(args.lr).split('.')[-1]}_pretrain{args.load_weight}_cluster{args.is_cluster}"
     option = input(f"{args.save} model name: {model_name}, (y(default)/n):")
     if option == '' or option == 'y' or option == 'yes' or option is None:
         args.model_name = model_name

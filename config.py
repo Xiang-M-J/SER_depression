@@ -45,7 +45,7 @@ class Args:
                  kernel_size=2,
                  drop_rate=0.1,
                  dilation=8,
-                 is_weight=True,
+                 is_weight=False,
                  is_cluster=False,
                  is_mask=False,
                  d_model=256,

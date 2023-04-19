@@ -8,7 +8,7 @@ from einops.layers.torch import Rearrange
 from torch.cuda.amp import autocast, GradScaler
 from tqdm import tqdm
 from model import TAB, TAB_ADD, TAB_DIFF, attention
-from CNN import CausalConv
+from blocks import CausalConv
 from config import Args
 from utils import accuracy_cal, get_newest_file, load_loader, NoamScheduler
 from multiModel import Multi_model

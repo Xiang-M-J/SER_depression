@@ -7,7 +7,7 @@ import torch.optim
 from einops.layers.torch import Rearrange
 from tqdm import tqdm
 from torch.cuda.amp import autocast, GradScaler
-from CNN import CausalConv
+from blocks import CausalConv
 from config import Args
 from utils import load_multi_dataset, accuracy_cal, l2_regularization, get_newest_file, seed_everything
 
