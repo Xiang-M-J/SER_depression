@@ -90,11 +90,12 @@ class Classifier(nn.Module):
 
 
 class MModel(nn.Module):
-    def __init__(self, arg: Args, seq_len, index, num_layers=None):
+    def __init__(self, arg: Args, index, num_layers=None, seq_len=None):
         super(MModel, self).__init__()
         if num_layers is None:
-            num_layers = [3, 4]
-        arg.seq_len = seq_len
+            num_layers = [3, 5]
+        if seq_len is not None:
+            arg.seq_len = seq_len
         arg.dilation = num_layers[0] + num_layers[1]
         self.prepare = Prepare(arg)
         self.shareNet = AT_TAB(arg, num_layers, index=0)

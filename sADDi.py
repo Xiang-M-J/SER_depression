@@ -197,6 +197,10 @@ class sADDiTrainer:
             ae_loss = []
             disc_loss = []
             gene_loss = []
+            disc_num = 0
+            disc_acc = 0
+            gene_num = 0
+            gene_acc = 0
             for real_x, real_label in self.src_train:
                 batch_size = real_x.shape[0]
                 real_x, real_label = real_x.to(device), real_label.to(device)
@@ -233,6 +237,9 @@ class sADDiTrainer:
                 # label = torch.cat([fake_label, real_label], dim=0)
                 Y = discriminator(X)
                 epoch_disc_loss = self.criterion(Y, label)
+                correct_num = accuracy_cal(Y, label)
+                disc_acc += correct_num.cpu().numpy()
+                disc_num += Y.shape[0]
                 discriminator_optimizer.zero_grad()
                 epoch_disc_loss.backward()
                 discriminator_optimizer.step()
@@ -249,11 +256,15 @@ class sADDiTrainer:
                 fake_x = generator(torch.cat([z_p, y_p], dim=1).unsqueeze(-1))
                 fake_y = discriminator(fake_x)
                 epoch_gene_loss = self.criterion(fake_y, label)
+                correct_num = accuracy_cal(fake_y, label)
+                gene_num += fake_y.shape[0]
+                gene_acc += correct_num.cpu().numpy()
                 generator_optimizer.zero_grad()
                 epoch_gene_loss.backward()
                 generator_optimizer.step()
                 gene_loss.append(epoch_gene_loss.data.item())
             print(f"epoch{epoch}: {np.mean(ae_loss)},  {np.mean(disc_loss)},  {np.mean(gene_loss)}")
+            print(f"discriminator acc {disc_acc/disc_num}, generator acc {gene_acc / gene_num}")
         torch.save(encoder, self.encoder_final_path)
 
     def train(self, flag=True):
@@ -362,6 +373,6 @@ if __name__ == "__main__":
     src_dataset_name = 'CASIA_'
     tgt_dataset_name = "RAVDESS_"
     trainer = sADDiTrainer(arg, src_dataset_name, tgt_dataset_name)
-    # trainer.pretext()
+    trainer.pretext()
     # trainer.train()
-    trainer.test()
+    # trainer.test()

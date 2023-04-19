@@ -1,15 +1,16 @@
 import math
 import os
-
+import torch.nn as nn
 import numpy as np
 from matplotlib import pyplot as plt
 from torch.autograd import Function
 import torch.optim
 from torch.cuda.amp import autocast, GradScaler
+from einops.layers.torch import Rearrange
 
 from config import Args
-from multiModel import MModel, Discriminator, mmd
-from utils import get_newest_file, load_loader, NoamScheduler, Metric, EarlyStopping
+from multiModel import MModel, mmd, Discriminator
+from utils import get_newest_file, load_loader, NoamScheduler, Metric, EarlyStopping, accuracy_cal
 
 dataset_name = ['MODMA', 'CASIA']
 num_class = [2, 6]
@@ -34,6 +35,114 @@ class GRL(Function):
         return grad_output.neg() * ctx.constant, None
 
 
+class ConvBlock(nn.Module):
+    def __init__(self, in_dim, out_dim, kernel_size, pool_size):
+        super(ConvBlock, self).__init__()
+        self.conv = nn.Conv1d(in_channels=in_dim, out_channels=out_dim, kernel_size=kernel_size, padding="same")
+        self.bn = nn.BatchNorm1d(out_dim)
+        self.act = nn.ReLU()
+        self.pool = nn.MaxPool1d(pool_size)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.pool(x)
+        x = self.bn(x)
+        x = self.act(x)
+        return x
+
+
+class UpsampleBlock(nn.Module):
+    def __init__(self, in_dim, out_dim, scale_factor, size=None):
+        super(UpsampleBlock, self).__init__()
+        self.conv = nn.Conv1d(in_channels=in_dim, out_channels=out_dim, kernel_size=3, padding="same")
+        if size is None:
+            self.upsample = nn.Upsample(scale_factor=scale_factor)
+        else:
+            self.upsample = nn.Upsample(size=size)
+        self.bn = nn.BatchNorm1d(out_dim)
+        self.act = nn.ReLU()
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.upsample(x)
+        x = self.bn(x)
+        x = self.act(x)
+        return x
+
+
+class Encoder(nn.Module):
+    def __init__(self, arg: Args):
+        super(Encoder, self).__init__()
+        # self.conv1 = ConvBlock(arg.feature_dim, 64, 3, 2)
+        # self.conv2 = ConvBlock(64, 64, 3, 2)
+        # self.conv3 = ConvBlock(64, 128, 3, 4)
+        # self.conv4 = ConvBlock(128, 256, 3, 4)
+        # self.l1 = nn.Linear(arg.seq_len, 128),
+        # self.l2 = nn.Linear(128, 64),
+        # self.l3 = nn.Linear(64, 32),
+        # self.l4 = nn.Linear(32, 16),
+        # self.l5 = nn.Linear(16, 8)
+        self.net = nn.Sequential(
+            nn.Linear(arg.seq_len, 128),
+            nn.Linear(128, 64),
+            nn.Linear(64, 32),
+            # nn.Linear(32, 16),
+            # nn.Linear(16, 8)
+        )
+
+    def forward(self, x):
+        # x = self.conv1(x)
+        # x = self.conv2(x)
+        # x = self.conv3(x)
+        # x = self.conv4(x)
+        x = self.net(x)
+        return x
+
+
+class Decoder(nn.Module):
+    def __init__(self, arg: Args):
+        super(Decoder, self).__init__()
+        # self.upsample1 = UpsampleBlock(256, 128, 4)
+        # self.upsample2 = UpsampleBlock(128, 64, 4)
+        # self.upsample3 = UpsampleBlock(64, 64, 2)
+        # self.upsample4 = UpsampleBlock(64, arg.feature_dim, 2, size=arg.seq_len)
+        self.net = nn.Sequential(
+            # nn.Linear(8, 16),
+            # nn.Linear(16, 32),
+            nn.Linear(32, 64),
+            nn.Linear(64, 128),
+            nn.Linear(128, arg.seq_len)
+        )
+
+    def forward(self, x):
+        # x = self.upsample1(x)
+        # x = self.upsample2(x)
+        # x = self.upsample3(x)
+        # x = self.upsample4(x)
+        x = self.net(x)
+        return x
+
+
+class Hidden(nn.Module):
+    def __init__(self, arg: Args):
+        super(Hidden, self).__init__()
+        self.conv1 = ConvBlock(arg.filters, 64, kernel_size=3, pool_size=2)
+        self.conv2 = ConvBlock(64, 128, kernel_size=3, pool_size=2)
+        self.conv3 = ConvBlock(128, 256, kernel_size=3, pool_size=2)
+        self.upsample1 = UpsampleBlock(256, 128, scale_factor=2)
+        self.upsample2 = UpsampleBlock(128, 64, scale_factor=2)
+        self.upsample3 = UpsampleBlock(64, arg.filters, scale_factor=2, size=arg.seq_len)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.upsample1(x)
+        x = self.upsample2(x)
+        x = self.upsample3(x)
+        return x
+
+
 class MultiTrainer:
     def __init__(self, args: Args):
         args.num_class = num_class
@@ -43,13 +152,17 @@ class MultiTrainer:
         self.iteration = 5000
         self.inner_iter = 20
         self.mmd_step = 8
+        self.feature_dim = args.feature_dim
         self.batch_size = args.batch_size
+        self.seq_len = args.seq_len
         self.lr = args.lr
         self.weight_decay = args.weight_decay
         self.best_path = "models/Multi/MODMA_best.pt"
+        self.encoder_final_path = f"models/Multi/encoder.pt"
         self.model_path = "models/Multi/MODMA.pt"
         self.pretrain_path = "models/Multi/pretrain.pt"
         self.pretrain_best_path = "models/Multi/pretrain_best.pt"
+        self.pretext_epochs = 50
         args.spilt_rate = split_rate
         self.loader = []
         for i in range(dataset_num):
@@ -100,28 +213,38 @@ class MultiTrainer:
         return loss, correct_num
 
     @staticmethod
-    def get_mmd_loss(model, src_model, train_batch):
-        mmd_feature = [model.get_generalFeature(train_batch[0][0].to(device))]
-        train_batch[1][0] = train_batch[1][0].to(device)
-        x = src_model.get_generalFeature(train_batch[1][0])
-        mmd_feature.append(x)
-        # mmd_feature.append(model.get_generalFeature(train_batch[1][0].to(device)))
+    def pseudo_label(batch_size, seq_len):
+        label = torch.zeros([batch_size, 2, seq_len])
+        num = int(batch_size / 2)
+        label[:num, 0, :] = 1.
+        label[num:, 1, :] = 1.
+        return label[torch.randperm(label.size(0))].type(torch.FloatTensor)
+
+    @staticmethod
+    def get_data(batch):
+        x, y = batch
+        x, y = x.to(device), y.to(device)
+        return x, y
+
+    @staticmethod
+    def get_mmd_loss(model, src_model, hidden, train_batch):
+        x1 = model.get_generalFeature(train_batch[0][0].to(device))
+        x2 = src_model.get_generalFeature(train_batch[1][0].to(device))
+        mmd_feature = [hidden(x1), hidden(x2)]
         mini_shape = min([x.shape[0] for x in mmd_feature])
         mmd_loss = mmd(mmd_feature[0][:mini_shape].view(mini_shape, -1),
                        mmd_feature[1][:mini_shape].view(mini_shape, -1))
         return mmd_loss
 
     @staticmethod
-    def get_domain_loss(model, src_model, discriminator, train_batch, p):
-        generalFeature = [model.get_generalFeature(train_batch[0][0].to(device))]
-        train_batch[1][0] = train_batch[1][0].to(device)
-        x = src_model.get_generalFeature(train_batch[1][0])
-        generalFeature.append(x)
-        # generalFeature.append(model.get_generalFeature(train_batch[1][0].to(device)))
+    def get_domain_loss(model, src_model, hidden, discriminator, train_batch, p):
+        x1 = model.get_generalFeature(train_batch[0][0].to(device))
+        x2 = src_model.get_generalFeature(train_batch[1][0].to(device))
+        generalFeature = [hidden(x1), hidden(x2)]
         x = torch.cat(generalFeature, dim=0)
         label = torch.cat([torch.ones(len(train_batch[0][0])), torch.zeros(len(train_batch[1][0]))], dim=0).long()
         alpha = 2. / (1 + np.exp((-10. * p))) - 1
-        x = GRL.apply(x, 1)
+        x = GRL.apply(x, alpha)
         loss, correct_num_domain = discriminator(x, label.to(device))
         return loss, correct_num_domain
 
@@ -137,19 +260,13 @@ class MultiTrainer:
     def test_step(self, model, batch):
         return self.val_step(model, batch)
 
-    @staticmethod
-    def get_data(batch):
-        x, y = batch
-        x, y = x.to(device), y.to(device)
-        return x, y
-
     def pretrain(self):
         arg = Args()
         arg.num_class = num_class
         arg.epochs = 60
         arg.step_size = 10
         arg.gamma = 0.3
-        model = MModel(arg, index=1)
+        model = MModel(arg, seq_len[1], index=1)
         model = model.to(device)
         lr = 2e-4
 
@@ -172,7 +289,7 @@ class MultiTrainer:
             train_loss /= math.ceil(train_num / self.batch_size)
             metric.train_acc.append(train_acc)
             metric.train_loss.append(train_loss)
-            print(f"epoch {epoch + 1}: train_acc: {train_acc*100:.3f}\t train_loss: {train_loss:.4f}")
+            print(f"epoch {epoch + 1}: train_acc: {train_acc * 100:.3f}\t train_loss: {train_loss:.4f}")
 
             model.eval()
             val_acc = 0
@@ -187,7 +304,7 @@ class MultiTrainer:
             val_loss /= math.ceil(val_num / self.batch_size)
             metric.val_acc.append(val_acc)
             metric.val_loss.append(val_loss)
-            print(f"epoch {epoch + 1}: val_acc: {val_acc*100:.3f}\t val_loss: {val_loss:.4f}")
+            print(f"epoch {epoch + 1}: val_acc: {val_acc * 100:.3f}\t val_loss: {val_loss:.4f}")
             scheduler.step()
 
             if val_acc > best_val_accuracy:
@@ -234,30 +351,73 @@ class MultiTrainer:
         test_acc = test_acc / test_num
         print(f"test Accuracy:{test_acc * 100:.3f}\t")
 
+    def get_fake(self, encoder, generator, x_no):
+        _, z_p, _ = encoder[0](x_no, x_no)
+        y_p = self.pseudo_label(x_no.shape[0], x_no.shape[-1]).to(device)  # 伪标签
+        fake_x = generator[0:3](torch.cat([y_p, z_p], dim=1))
+        _, fake_x, _ = generator[3](fake_x, fake_x)
+        return y_p, fake_x
+
+    def pretext(self):
+        model = torch.load(self.pretrain_path).to(device)
+        encoder = Encoder(arg).to(device)
+        decoder = Decoder(arg).to(device)
+        criterion = nn.MSELoss().to(device)
+        ae_parameter = [
+            {"params": encoder.parameters()},
+            {"params": decoder.parameters()}
+        ]
+        ae_optimizer = self.get_optimizer(arg, ae_parameter, 4e-4)
+        encoder.train()
+        decoder.train()
+        model.eval()
+        for epoch in range(100):
+            # 记录变量置0
+            ae_loss = []
+            for batch in self.loader[1][0]:
+                x, _ = self.get_data(batch)
+                # 训练AE
+                with torch.no_grad():
+                    x = model.get_generalFeature(x)
+                h = encoder(x)
+                r = decoder(h)
+                loss = criterion(r, x)
+                ae_optimizer.zero_grad()
+                loss.backward()
+                ae_optimizer.step()
+                ae_loss.append(loss.data.item())
+            print(f"epoch{epoch}: AE Loss: {np.mean(ae_loss)}")
+        torch.save(encoder, self.encoder_final_path)
+
     def train(self):
         arg.step_size = 30
         arg.gamma = 0.3
         mini_iter = min([len(self.loader[i][0]) for i in range(dataset_num)])
-        # mini_sample_num = min(len(self.src1_train.dataset), len(self.src2_train.dataset), len(self.tgt_train.dataset))
-
         train_iter = [iter(self.loader[i][0]) for i in range(dataset_num)]
+        src_model = torch.load(self.pretrain_path)
+        src_model.eval()
         model = MModel(arg, seq_len=seq_len[0], index=0).to(device)
         optimizer = self.get_optimizer(arg, model.parameters(), lr=arg.lr)
         scheduler = self.get_scheduler(optimizer, arg)
+        hidden = Hidden(arg).to(device)
         parameter = [
             {'params': model.prepare.parameters(), 'lr': arg.lr},
-            {'params': model.shareNet.parameters(), 'lr': arg.lr}
+            {'params': model.shareNet.parameters(), 'lr': arg.lr},
+            {'params': hidden.parameters(), 'lr': arg.lr}
         ]
-
-        src_model = torch.load(self.pretrain_path)
-        src_model.eval()
         share_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
         share_scheduler = self.get_scheduler(share_optimizer, arg)
+        # encoder = torch.load(self.encoder_final_path)
+        # encoder.eval()
+        # tgt_encoder = Encoder(arg).to(device)
+        # tgt_encoder.load_state_dict(encoder.state_dict())
 
         discriminator = Discriminator(arg).to(device)
         discriminator.train()
         parameter = [
+            {'params': model.prepare.parameters(), 'lr': arg.lr},
             {'params': model.shareNet.parameters(), 'lr': arg.lr},
+            {"params": hidden.parameters(), 'lr': arg.lr},
             {"params": discriminator.parameters(), 'lr': arg.lr}
         ]
         disc_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
@@ -276,7 +436,6 @@ class MultiTrainer:
         for epoch in range(self.epochs):
 
             model.train()
-
             for batch in self.loader[0][0]:
                 loss, correct_num = self.train_step(model, optimizer, batch)
                 train_acc += correct_num.cpu().numpy()
@@ -293,17 +452,21 @@ class MultiTrainer:
                             train_iter[i] = iter(self.loader[i][0])
                             batch = next(train_iter[i])
                         train_batch.append(batch)
-                    mmd_loss = self.get_mmd_loss(model, src_model, train_batch)
+                    mmd_loss = self.get_mmd_loss(model, src_model, hidden, train_batch)
                     m_loss.append(mmd_loss.data.item())
                     share_optimizer.zero_grad()
                     mmd_loss.backward()
                     share_optimizer.step()
                     p = epoch / self.epochs
-                    domain_loss, correct_num = self.get_domain_loss(model, src_model, discriminator, train_batch, p)
+                    domain_loss, correct_num = self.get_domain_loss(model, src_model, hidden, discriminator, train_batch, p)
                     disc_optimizer.zero_grad()
                     domain_loss.backward()
                     disc_optimizer.step()
-                    # print(domain_loss.data.item())
+                    domain_acc += correct_num.cpu().numpy()
+                    domain_num += len(train_batch[1][0])
+                    domain_num += len(train_batch[0][0])
+                domain_acc = domain_acc / domain_num
+                print(f"domain accuracy: {domain_acc:.3f}")
 
                 print(np.mean(m_loss))
 
@@ -316,7 +479,6 @@ class MultiTrainer:
             metric.train_acc.append(train_acc)
             metric.train_loss.append(train_loss)
             print(f"MODMA: train Loss:{train_loss:.4f}\t train Accuracy:{train_acc * 100:.3f}\t")
-
             model.eval()
             with torch.no_grad():
                 for batch in self.loader[0][1]:
@@ -406,7 +568,7 @@ class MultiTrainer:
 if __name__ == "__main__":
     arg = Args()
     trainer = MultiTrainer(arg)
+    # trainer.pretext()
     # trainer.pretrain()
     trainer.train()
     trainer.test()
-
