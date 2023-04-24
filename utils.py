@@ -53,6 +53,27 @@ class EarlyStopping:
             return False
 
 
+class ModelSave:
+    def __init__(self, save_path: str, step: int = 10, begin_epoch: int = 50):
+        self.save_path = save_path
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        self.step = step
+        self.begin_epoch = begin_epoch
+
+    def __call__(self, model, epoch):
+        """
+        model
+        path
+        """
+        if epoch < self.begin_epoch:
+            return
+        if (epoch - self.begin_epoch) % self.step == 0:
+            path = self.save_path + f"/model_{epoch}.pt"
+            torch.save(model, path)
+            print(f"save to {path}")
+
+
 def load_dataset(dataset_name, spilt_rate, random_seed, version='V2', order=3, is_cluster=False):
     """
     加载数据集
@@ -831,7 +852,7 @@ def model_structure(model_path, save_path=None):
         f.write('|' + ' ' * 11 + 'weight name' + ' ' * 10 + '|' + ' ' * 15 + 'weight shape' + ' ' * 15 + '|' \
                 + ' ' * 3 + 'number' + ' ' * 3 + '|\n')
         print('|' + ' ' * 11 + 'weight name' + ' ' * 10 + '|' + ' ' * 15 + 'weight shape' + ' ' * 15 + '|' \
-                + ' ' * 3 + 'number' + ' ' * 3 + '|')
+              + ' ' * 3 + 'number' + ' ' * 3 + '|')
         f.write('-' * 90 + "\n")
         print('-' * 90)
         num_para = 0
@@ -884,5 +905,6 @@ if __name__ == "__main__":
     #        "pretrain_True1")
     # args = Args()
     # plot_noam(args=args)
-    model_structure(model_path="models/MultiTIM_AT_DIFF_MODMA_order3_drop1_mfcc_epoch100_l2re1_lr0004_pretrainFalse_clusterFalse.pt")
+    model_structure(
+        model_path="models/MultiTIM_AT_DIFF_MODMA_order3_drop1_mfcc_epoch100_l2re1_lr0004_pretrainFalse_clusterFalse.pt")
     pass

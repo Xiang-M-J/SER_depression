@@ -13,7 +13,7 @@ from baseline import TIM, SET, Transformer_TIM, MLTransformer_TIM, Transformer, 
 from config import Args
 from model import AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM, MultiTIM
 from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, plot, logger, EarlyStopping, \
-    IEMOCAP_LABELS, NoamScheduler
+    IEMOCAP_LABELS, NoamScheduler, ModelSave
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -26,6 +26,7 @@ class Net_Instance:
         self.best_path = f"models/" + args.model_name + "_best" + ".pt"  # 模型保存路径(max val acc)
         self.last_path = f"models/" + args.model_name + ".pt"  # 模型保存路径(final)
         self.result_path = f"results/"  # 结果保存路径（分为数据和图片）
+        self.save_path = f"models/" + args.model_name
         self.batch_size = args.batch_size
         self.epochs = args.epochs
         self.lr = args.lr
@@ -110,6 +111,7 @@ class Net_Instance:
         if self.args.load_weight:
             model_dict = model.state_dict()
             pretrain_model = torch.load(self.args.pretrain_model_path)
+            print(f"load: {self.args.pretrain_model_path}")
             pretrain_model_dict = pretrain_model.state_dict().items()
             # 对于Transformer_DeltaTIM
             # pretrain_name = ['prepare', 'generalFeatureExtractor']
@@ -159,8 +161,8 @@ class Net_Instance:
             parameter = []
             for name, param in model.named_parameters():
                 if name.split('.')[0] in pretrain_name:
-                    # parameter.append({"params": param, "lr": lr})
-                    param.requires_grad = False
+                    parameter.append({"params": param, "lr": 0.2 * self.lr})
+                    # param.requires_grad = False
                 else:
                     parameter.append({"params": param, "lr": self.lr})
             optimizer = self.get_optimizer(parameter, self.lr)
@@ -181,6 +183,7 @@ class Net_Instance:
 
         loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=0.1).to(device)  # label_smoothing=0.1 相当于smooth_labels的功能
         early_stop = EarlyStopping(patience=self.args.patience)
+        model_save = ModelSave(save_path=self.save_path, )
         scheduler = self.get_scheduler(optimizer, arg=self.args)
         best_val_accuracy = 0
         model = model.to(device)
@@ -262,6 +265,7 @@ class Net_Instance:
                 print(f"val_accuracy did not improve from {best_val_accuracy}")
             if early_stop(metric.val_acc[-1]):
                 break
+            # model_save(model, epoch)
 
         if self.args.save:
             torch.save(model, self.last_path)
@@ -315,7 +319,7 @@ class Net_Instance:
             report = classification_report(y_true, y_pred, target_names=MODMA_LABELS)
         except ValueError:
             report = classification_report(y_true, y_pred, target_names=IEMOCAP_LABELS)
-        test_acc = float((test_correct*100) / test_num)
+        test_acc = float((test_correct * 100) / test_num)
         test_loss = test_loss / math.ceil(test_num / self.batch_size)
         metric.confusion_matrix.append(conf_matrix)
         metric.report.append(report)
@@ -377,3 +381,24 @@ class Net_Instance:
                 self.writer.add_text("classification report(final)", metric.report[0])
                 self.logger.test(test_metric=metric)
                 np.save(self.result_path + "data/" + self.args.model_name + "_test_metric.npy", metric.item())
+
+    def multi_test(self, test_dataset):
+        """
+        测试每隔step个epoch保存的模型
+        """
+        models = os.listdir(self.save_path)
+        metric = Metric(mode="test")
+        metric.report = []
+        metric.confusion_matrix = []
+        metric.test_acc = []
+        metric.test_loss = []
+        test_loader = dataloader.DataLoader(
+            dataset=test_dataset,
+            batch_size=self.batch_size,
+        )
+        loss_fn = torch.nn.CrossEntropyLoss().to(device)
+        test_num = len(test_dataset)
+        for m in models:
+            model_path = self.save_path + f"/{m}"
+            metric, _ = self.test_step(model_path, test_loader, loss_fn, test_num, metric)
+        print(metric.test_acc)

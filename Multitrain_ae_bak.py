@@ -7,10 +7,10 @@ from torch.autograd import Function
 import torch.optim
 from torch.cuda.amp import autocast, GradScaler
 from einops.layers.torch import Rearrange
-
+import torch.nn.functional as F
 from config import Args
-from multiModel import MModel, mmd, Discriminator
-from utils import get_newest_file, load_loader, NoamScheduler, Metric, EarlyStopping, accuracy_cal
+from multiModel import MModel, mmd
+from utils import get_newest_file, load_loader, NoamScheduler, Metric, EarlyStopping, accuracy_cal, cal_seq_len
 
 dataset_name = ['MODMA', 'CASIA']
 num_class = [2, 6]
@@ -70,57 +70,33 @@ class UpsampleBlock(nn.Module):
         return x
 
 
-class Encoder(nn.Module):
+class Discriminator(nn.Module):
     def __init__(self, arg: Args):
-        super(Encoder, self).__init__()
-        # self.conv1 = ConvBlock(arg.feature_dim, 64, 3, 2)
-        # self.conv2 = ConvBlock(64, 64, 3, 2)
-        # self.conv3 = ConvBlock(64, 128, 3, 4)
-        # self.conv4 = ConvBlock(128, 256, 3, 4)
-        # self.l1 = nn.Linear(arg.seq_len, 128),
-        # self.l2 = nn.Linear(128, 64),
-        # self.l3 = nn.Linear(64, 32),
-        # self.l4 = nn.Linear(32, 16),
-        # self.l5 = nn.Linear(16, 8)
+        super(Discriminator, self).__init__()
         self.net = nn.Sequential(
-            nn.Linear(arg.seq_len, 128),
-            nn.Linear(128, 64),
-            nn.Linear(64, 32),
-            # nn.Linear(32, 16),
-            # nn.Linear(16, 8)
+            nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(arg.filters),
+            # nn.MaxPool1d(2),
+            nn.ReLU(),
+            # nn.Conv1d(in_channels=256, out_channels=128, kernel_size=3, padding="same"),
+            # nn.BatchNorm1d(128),
+            # # nn.MaxPool1d(2),
+            # nn.ReLU(),
+            # nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
+            # nn.BatchNorm1d(arg.filters),
+            # # nn.MaxPool1d(2),
+            # nn.ReLU(),
+            Rearrange("N C L -> N (C L)"),
+            nn.Linear(arg.seq_len * arg.filters, 100),
+            nn.Dropout(0.3),
+            nn.Linear(100, 2),
         )
 
-    def forward(self, x):
-        # x = self.conv1(x)
-        # x = self.conv2(x)
-        # x = self.conv3(x)
-        # x = self.conv4(x)
+    def forward(self, x, y):
         x = self.net(x)
-        return x
-
-
-class Decoder(nn.Module):
-    def __init__(self, arg: Args):
-        super(Decoder, self).__init__()
-        # self.upsample1 = UpsampleBlock(256, 128, 4)
-        # self.upsample2 = UpsampleBlock(128, 64, 4)
-        # self.upsample3 = UpsampleBlock(64, 64, 2)
-        # self.upsample4 = UpsampleBlock(64, arg.feature_dim, 2, size=arg.seq_len)
-        self.net = nn.Sequential(
-            # nn.Linear(8, 16),
-            # nn.Linear(16, 32),
-            nn.Linear(32, 64),
-            nn.Linear(64, 128),
-            nn.Linear(128, arg.seq_len)
-        )
-
-    def forward(self, x):
-        # x = self.upsample1(x)
-        # x = self.upsample2(x)
-        # x = self.upsample3(x)
-        # x = self.upsample4(x)
-        x = self.net(x)
-        return x
+        loss = F.cross_entropy(x, y)
+        correct_num = accuracy_cal(x, y)
+        return loss, correct_num
 
 
 class Hidden(nn.Module):
@@ -129,68 +105,37 @@ class Hidden(nn.Module):
         self.conv1 = ConvBlock(arg.filters, 64, kernel_size=3, pool_size=2)
         self.conv2 = ConvBlock(64, 128, kernel_size=3, pool_size=2)
         self.conv3 = ConvBlock(128, 256, kernel_size=3, pool_size=2)
+        self.conv4 = ConvBlock(256, 256, kernel_size=3, pool_size=2)
         self.upsample1 = UpsampleBlock(256, 128, scale_factor=2)
         self.upsample2 = UpsampleBlock(128, 64, scale_factor=2)
         self.upsample3 = UpsampleBlock(64, arg.filters, scale_factor=2, size=arg.seq_len)
-        #
-        # self.fc1 = nn.Sequential(
+        # self.conv1 = nn.Sequential(
+        #     nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"),
+        #     nn.BatchNorm1d(arg.filters),
+        #     nn.ReLU(),
+        # )
+        self.l1 = nn.Sequential(
+            nn.Linear(arg.seq_len, arg.seq_len),
+            nn.ReLU()
+        )
+        # self.conv2 = nn.Sequential(
         #     nn.Conv1d(arg.filters, arg.filters, kernel_size=1, padding="same"),
         #     nn.BatchNorm1d(arg.filters),
         #     nn.ReLU(),
-        #     nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"),
-        #     nn.BatchNorm1d(arg.filters),
-        #     nn.ReLU()
-        # )
-        # self.fc21 = nn.Sequential(nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"))
-        # self.fc22 = nn.Sequential(nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"))
-
-        # torch.nn.init.xavier_uniform_(self.fc1[0].weight)
-        # torch.nn.init.xavier_uniform_(self.fc1[3].weight)
-        # torch.nn.init.xavier_uniform_(self.fc21[0].weight)
-        # self.fc21[0].bias.data.zero_()
-        # torch.nn.init.xavier_uniform_(self.fc22[0].weight)
-        # self.fc22[0].bias.data.zero_()
-
-        # self.fc1 = nn.Sequential(
-        #     nn.Conv1d(arg.filters, arg.filters, kernel_size=1, padding="same"),
-        #     nn.BatchNorm1d(arg.filters),
-        #     nn.ReLU(),
-        #     nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"),
-        #     nn.BatchNorm1d(arg.filters),
-        #     nn.ReLU()
-        # )
-        # self.fc2 = nn.Sequential(
-        #     nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"),
-        #     nn.BatchNorm1d(arg.filters),
-        #     nn.ReLU(),
-        #     nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"),
-        #     nn.BatchNorm1d(arg.filters),
-        #     nn.ReLU()
-        # )
-        # self.fc3 = nn.Sequential(
-        #     nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"),
-        #     nn.BatchNorm1d(arg.filters),
-        #     nn.ReLU(),
-        #     nn.Conv1d(arg.filters, arg.filters, kernel_size=1, padding="same"),
-        #     nn.BatchNorm1d(arg.filters),
-        #     nn.ReLU()
         # )
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
+        # x = self.conv4(x)
         x = self.upsample1(x)
         x = self.upsample2(x)
         x = self.upsample3(x)
-
-        # x = self.fc1(x)
-        # x = self.fc21(x)
-        # x = self.fc22(x)
-
-        # x = self.fc1(x)
-        # x = self.fc2(x)
-        # x = self.fc3(x)
+        # for i in range(2):
+        #     # x = self.conv1(x)
+        #     # x = self.conv2(x)
+        #     x = self.l1(x)
         return x
 
 
@@ -202,7 +147,8 @@ class MultiTrainer:
         self.epochs = args.epochs
         self.iteration = 5000
         self.inner_iter = 20
-        self.mmd_step = 8
+        self.mmd_step = 3
+        self.domain_step = 6
         self.feature_dim = args.feature_dim
         self.batch_size = args.batch_size
         self.seq_len = args.seq_len
@@ -409,37 +355,6 @@ class MultiTrainer:
         _, fake_x, _ = generator[3](fake_x, fake_x)
         return y_p, fake_x
 
-    def pretext(self):
-        model = torch.load(self.pretrain_path).to(device)
-        encoder = Encoder(arg).to(device)
-        decoder = Decoder(arg).to(device)
-        criterion = nn.MSELoss().to(device)
-        ae_parameter = [
-            {"params": encoder.parameters()},
-            {"params": decoder.parameters()}
-        ]
-        ae_optimizer = self.get_optimizer(arg, ae_parameter, 4e-4)
-        encoder.train()
-        decoder.train()
-        model.eval()
-        for epoch in range(100):
-            # 记录变量置0
-            ae_loss = []
-            for batch in self.loader[1][0]:
-                x, _ = self.get_data(batch)
-                # 训练AE
-                with torch.no_grad():
-                    x = model.get_generalFeature(x)
-                h = encoder(x)
-                r = decoder(h)
-                loss = criterion(r, x)
-                ae_optimizer.zero_grad()
-                loss.backward()
-                ae_optimizer.step()
-                ae_loss.append(loss.data.item())
-            print(f"epoch{epoch}: AE Loss: {np.mean(ae_loss)}")
-        torch.save(encoder, self.encoder_final_path)
-
     def train(self):
         arg.step_size = 30
         arg.gamma = 0.3
@@ -487,11 +402,6 @@ class MultiTrainer:
         for epoch in range(self.epochs):
 
             model.train()
-            for batch in self.loader[0][0]:
-                loss, correct_num = self.train_step(model, optimizer, batch)
-                train_acc += correct_num.cpu().numpy()
-                train_loss += loss.data.item()
-
             if (epoch + 1) % self.mmd_step == 0:
                 m_loss = []
                 for step in range(self.inner_iter):
@@ -508,6 +418,17 @@ class MultiTrainer:
                     share_optimizer.zero_grad()
                     mmd_loss.backward()
                     share_optimizer.step()
+
+            if (epoch + 1) % self.domain_step == 0:
+                for step in range(self.inner_iter):
+                    train_batch = []
+                    for i in range(dataset_num):
+                        try:
+                            batch = next(train_iter[i])
+                        except StopIteration:
+                            train_iter[i] = iter(self.loader[i][0])
+                            batch = next(train_iter[i])
+                        train_batch.append(batch)
                     p = epoch / self.epochs
                     domain_loss, correct_num = self.get_domain_loss(model, src_model, hidden, discriminator,
                                                                     train_batch, p)
@@ -520,7 +441,10 @@ class MultiTrainer:
                 domain_acc = domain_acc / domain_num
                 print(f"domain accuracy: {domain_acc:.3f}")
 
-                print(np.mean(m_loss))
+            for batch in self.loader[0][0]:
+                loss, correct_num = self.train_step(model, optimizer, batch)
+                train_acc += correct_num.cpu().numpy()
+                train_loss += loss.data.item()
 
             scheduler.step()
             share_scheduler.step()

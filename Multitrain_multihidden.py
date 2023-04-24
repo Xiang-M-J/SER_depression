@@ -281,23 +281,31 @@ class MultiTrainer:
     def get_mmd_loss(model, src_model, hidden, train_batch):
         x1 = model.get_generalFeature(train_batch[0][0].to(device))
         x2 = src_model.get_generalFeature(train_batch[1][0].to(device))
-        mmd_feature = [hidden(x1), hidden(x2)]
-        mini_shape = min([x.shape[0] for x in mmd_feature])
-        mmd_loss = mmd(mmd_feature[0][:mini_shape].view(mini_shape, -1),
-                       mmd_feature[1][:mini_shape].view(mini_shape, -1))
+        mini_shape = min(x1.shape[0], x2.shape[0])
+        x1, x2 = x1[:mini_shape], x2[:mini_shape]
+        mmd_loss = 0
+        for h in hidden:
+            mmd_feature = [h(x1), h(x2)]
+            mmd_loss += mmd(mmd_feature[0].view(mini_shape, -1),
+                            mmd_feature[1].view(mini_shape, -1))
         return mmd_loss
 
     @staticmethod
     def get_domain_loss(model, src_model, hidden, discriminator, train_batch, p):
         x1 = model.get_generalFeature(train_batch[0][0].to(device))
         x2 = src_model.get_generalFeature(train_batch[1][0].to(device))
-        generalFeature = [hidden(x1), hidden(x2)]
-        x = torch.cat(generalFeature, dim=0)
         label = torch.cat([torch.ones(len(train_batch[0][0])), torch.zeros(len(train_batch[1][0]))], dim=0).long()
         alpha = 2. / (1 + np.exp((-10. * p))) - 1
-        x = GRL.apply(x, alpha)
-        loss, correct_num_domain = discriminator(x, label.to(device))
-        return loss, correct_num_domain
+        domain_loss = 0
+        correct_num = 0
+        for h in hidden:
+            generalFeature = [h(x1), h(x2)]
+            x = torch.cat(generalFeature, dim=0)
+            x = GRL.apply(x, alpha)
+            loss, correct_num_domain = discriminator(x, label.to(device))
+            domain_loss += loss
+            correct_num += correct_num_domain
+        return domain_loss, correct_num / len(hidden)
 
     def val_step(self, model, batch):
         x, y = self.get_data(batch)
@@ -450,11 +458,13 @@ class MultiTrainer:
         model = MModel(arg, seq_len=seq_len[0], index=0).to(device)
         optimizer = self.get_optimizer(arg, model.parameters(), lr=arg.lr)
         scheduler = self.get_scheduler(optimizer, arg)
-        hidden = Hidden(arg).to(device)
+        hidden1 = Hidden(arg).to(device)
+        hidden2 = Hidden(arg).to(device)
         parameter = [
             {'params': model.prepare.parameters(), 'lr': arg.lr},
             {'params': model.shareNet.parameters(), 'lr': arg.lr},
-            {'params': hidden.parameters(), 'lr': arg.lr}
+            {'params': hidden1.parameters(), 'lr': arg.lr},
+            {'params': hidden2.parameters(), 'lr':arg.lr}
         ]
         share_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
         share_scheduler = self.get_scheduler(share_optimizer, arg)
@@ -468,7 +478,8 @@ class MultiTrainer:
         parameter = [
             {'params': model.prepare.parameters(), 'lr': arg.lr},
             {'params': model.shareNet.parameters(), 'lr': arg.lr},
-            {"params": hidden.parameters(), 'lr': arg.lr},
+            {"params": hidden1.parameters(), 'lr': arg.lr},
+            {'params': hidden2.parameters(), 'lr': arg.lr},
             {"params": discriminator.parameters(), 'lr': arg.lr}
         ]
         disc_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
@@ -503,14 +514,14 @@ class MultiTrainer:
                             train_iter[i] = iter(self.loader[i][0])
                             batch = next(train_iter[i])
                         train_batch.append(batch)
-                    mmd_loss = self.get_mmd_loss(model, src_model, hidden, train_batch)
+                    mmd_loss = self.get_mmd_loss(model, src_model, [hidden1, hidden2], train_batch)
                     m_loss.append(mmd_loss.data.item())
                     share_optimizer.zero_grad()
                     mmd_loss.backward()
                     share_optimizer.step()
                     p = epoch / self.epochs
-                    domain_loss, correct_num = self.get_domain_loss(model, src_model, hidden, discriminator,
-                                                                    train_batch, p)
+                    domain_loss, correct_num = self.get_domain_loss(model, src_model, [hidden1, hidden2],
+                                                                    discriminator, train_batch, p)
                     disc_optimizer.zero_grad()
                     domain_loss.backward()
                     disc_optimizer.step()

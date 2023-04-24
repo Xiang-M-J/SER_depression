@@ -271,6 +271,7 @@ class TAB_Attention_MH(nn.Module):
         )
         # self.attn = TransformerEncoderLayer(128, 4, 1024, 0.1, batch_first=True)
         self.attn = MultiHeadAttention(128, 4, 32, 32, 32)
+        # self.attn = MultiHeadAttention(39, 3, 13, 13, 13)
         # self.ff = feedForward(256, 1024)
         self.out_proj = nn.Sequential(
             Rearrange("N L C -> N C L"),
@@ -483,6 +484,8 @@ class AT_TAB(nn.Module):
             self.net.append(
                 Temporal_Aware_Block(feature_dim=128, filters=128, kernel_size=args.kernel_size,
                                      dilation=i, dropout=args.drop_rate)
+                # Temporal_Aware_Block(args.filters, args.filters, kernel_size=args.kernel_size, dilation=i,
+                #                      dropout=args.drop_rate)
             )
         self.out_proj1 = nn.Sequential(
             nn.Conv1d(128, args.filters, kernel_size=1),
@@ -574,7 +577,7 @@ class MultiTIM(nn.Module):
         # Linear
         self.merge = nn.Sequential(
             nn.Linear(args.dilation, 1),
-            nn.Dropout(0.2)
+            nn.Dropout(0.3)
         )
         # self.classifier = nn.Sequential(
         #     Rearrange('N L C  -> N C L'),

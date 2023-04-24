@@ -20,7 +20,7 @@ class Args:
                  lr=4e-4,
                  batch_size=64,
                  spilt_rate=None,
-                 weight_decay=0.1,
+                 weight_decay=0.2,
                  patience=10,
                  attention_type='AF',
                  multi_type='ADD_DIFF',
@@ -55,7 +55,7 @@ class Args:
                  d_qkv=64,
                  seq_len=313,
                  num_class=6,
-                 load_weight=False,
+                 load_weight=True,
                  ):
         """
         Args:

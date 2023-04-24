@@ -14,12 +14,12 @@ args.spilt_rate = spilt_rate
 args.num_class = 2
 args.multi_type = "AT_DIFF"
 # args.is_cluster = True
-args.pretrain_model_path = "models/MultiTIM_train_ADD_DIFF_IEMOCAP_order3_drop1_mfcc_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse.pt"
+args.pretrain_model_path = "models/MultiTIM_AT_DIFF_CASIA_order3_drop1_mfcc_epoch100_l2re1_lr0002_pretrainFalse_clusterFalse.pt"
 if __name__ == "__main__":
     print("dataset name: ", args.dataset_name)
     print("model type: ", args.model_type)
     if model_type == "MultiTIM":
-        model_name = f"{model_type}_{args.multi_type}_{args.dataset_name}_order{args.order}_drop{str(args.drop_rate).split('.')[-1]}_{args.data_type}_epoch{args.epochs}_l2re{str(args.weight_decay).split('.')[-1]}_lr{str(args.lr).split('.')[-1]}_pretrain{args.load_weight}_cluster{args.is_cluster}"
+        model_name = f"{model_type}_finetune_{args.multi_type}_{args.dataset_name}_order{args.order}_drop{str(args.drop_rate).split('.')[-1]}_{args.data_type}_epoch{args.epochs}_l2re{str(args.weight_decay).split('.')[-1]}_lr{str(args.lr).split('.')[-1]}_pretrain{args.load_weight}_cluster{args.is_cluster}"
     else:
         model_name = f"{model_type}_{args.dataset_name}_order{args.order}_drop{str(args.drop_rate).split('.')[-1]}_{args.data_type}_epoch{args.epochs}_l2re{str(args.weight_decay).split('.')[-1]}_lr{str(args.lr).split('.')[-1]}_pretrain{args.load_weight}_cluster{args.is_cluster}"
     option = input(f"{args.save} model name: {model_name}, (y(default)/n):")
@@ -31,5 +31,6 @@ if __name__ == "__main__":
         instance = Net_Instance(args)
         instance.train(train_dataset, val_dataset)
         instance.test(test_dataset, model_path=None)
+        # instance.multi_test(test_dataset)
     else:
         print("请修改模型名后再次执行")
