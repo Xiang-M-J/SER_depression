@@ -523,10 +523,8 @@ class AT_TAB(nn.Module):
     def forward(self, x_f, x_b, mask=None):
         stack_layer = []
         x_f = self.in_proj(x_f)
-        # x_b = self.in_proj(x_b)
         for layer in self.net:
             x_f = layer(x_f)
-            # x_b = layer(x_b)
             x_f = self.attn(x_f, mask)
             stack_layer.append(x_f)
         stack_layer = torch.stack(stack_layer, dim=-1)

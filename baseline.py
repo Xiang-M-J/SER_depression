@@ -305,7 +305,7 @@ class MLP(nn.Module):
             nn.Linear(in_features=args.filters, out_features=args.num_class)
         )
 
-    def forward(self, x, mask=None):
+    def forward(self, x):
         x = self.prepare(x)
         x = self.classifier(x)
         return x
