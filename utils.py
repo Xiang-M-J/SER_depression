@@ -53,6 +53,34 @@ class EarlyStopping:
             return False
 
 
+class EarlyStoppingLoss:
+    """Early stops the training if validation accuracy doesn't change after a given patience."""
+
+    def __init__(self, patience=5, delta_loss=1e-4):
+        """
+        Args:
+            patience (int): How long to wait after last time validation loss improved. Default: 5
+            use_acc (float): 只有当验证集准确率大于use_acc，才会触发早停止
+        """
+        self.patience = patience
+        self.patience_ = patience
+        self.delta_loss = delta_loss
+        self.last_val_loss = 0
+
+    def __call__(self, val_loss) -> bool:
+        if abs(self.last_val_loss - val_loss) < self.delta_loss:
+            self.patience -= 1
+        else:
+            self.patience = self.patience_
+        self.last_val_loss = val_loss
+        if self.patience == 1:
+            print(f"The validation loss has not changed in {self.patience_} iterations, stop train")
+            print(f"The final validation loss is {val_loss}")
+            return True
+        else:
+            return False
+
+
 class ModelSave:
     def __init__(self, save_path: str, step: int = 10, begin_epoch: int = 50):
         self.save_path = save_path
@@ -389,6 +417,7 @@ class myDataset(dataset.Dataset):
     def __getitem__(self, index):
         data = self.x[index]
         label = self.y[index]
+        # data = (data - np.mean(data, axis=0, keepdims=True)) / np.std(data, axis=0, keepdims=True)
         if self.appendix is not None:
             return data, label, self.appendix
         else:

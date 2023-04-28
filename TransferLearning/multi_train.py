@@ -1,17 +1,12 @@
 import math
 import os
 
-import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim
-from einops.layers.torch import Rearrange
 from torch.cuda.amp import autocast, GradScaler
-from tqdm import tqdm
-from model import TAB, TAB_ADD, TAB_DIFF, attention
-from blocks import CausalConv
+
 from config import Args
-from utils import accuracy_cal, get_newest_file, load_loader, NoamScheduler
 from multiModel import Multi_model
+from utils import get_newest_file, load_loader, NoamScheduler
 
 dataset_name = ['IEMOCAP', 'CASIA', 'MODMA']
 num_class = [6, 6, 2]
@@ -254,7 +249,7 @@ class MultiTrainer:
 
     def test(self, path=None):
         if path is None:
-            path = get_newest_file("models/Multi/")
+            path = get_newest_file("../models/Multi/")
             print(f"path is None, choose the newest model: {path}")
         if not os.path.exists(path):
             print(f"error! cannot find the {path}")

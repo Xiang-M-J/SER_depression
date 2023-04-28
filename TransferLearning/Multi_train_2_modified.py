@@ -44,10 +44,10 @@ class MultiTrainer:
         self.batch_size = args.batch_size
         self.lr = args.lr
         self.weight_decay = args.weight_decay
-        self.best_path = "models/Multi/MODMA_best.pt"
-        self.model_path = "models/Multi/MODMA.pt"
-        self.pretrain_path = "models/Multi/pretrain.pt"
-        self.pretrain_best_path = "models/Multi/pretrain_best.pt"
+        self.best_path = "../models/Multi/MODMA_best.pt"
+        self.model_path = "../models/Multi/MODMA.pt"
+        self.pretrain_path = "../models/Multi/pretrain.pt"
+        self.pretrain_best_path = "../models/Multi/pretrain_best.pt"
         args.spilt_rate = split_rate
         self.loader = []
         for i in range(dataset_num):
@@ -369,7 +369,7 @@ class MultiTrainer:
                 val_loss = 0
                 train_acc = 0
                 train_loss = 0
-        np.save("results/data/Multi/MODMA.npy", metric.item())
+        np.save("../results/data/Multi/MODMA.npy", metric.item())
         torch.save(tgt_model, self.model_path)
         # torch.save(model, "models/Multi/IEMOCAP_CASIA_MODMA.pt")
         # metric.train_acc.append(float(train_acc * 100) / train_num)
@@ -410,7 +410,7 @@ class MultiTrainer:
     def test(self, path=None):
 
         if path is None:
-            path = get_newest_file("models/Multi/")
+            path = get_newest_file("../models/Multi/")
             print(f"path is None, choose the newest model: {path}")
         if not os.path.exists(path):
             print(f"error! cannot find the {path}")

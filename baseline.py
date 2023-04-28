@@ -7,6 +7,7 @@ from TransformerEncoder import TransformerEncoder, TransformerEncoderLayer
 from blocks import CausalConv, Chomp1d
 from config import Args
 from utils import cal_seq_len
+from Transformer import PositionEncoding
 
 
 class TIM(nn.Module):
@@ -78,61 +79,6 @@ class Transformer_TIM(nn.Module):
         return x
 
 
-class MLTransformer_TIM(nn.Module):
-    """
-    可能由于Transformer的层数不深，导致ML(multi level)的意义不大
-    """
-
-    def __init__(self, args: Args):
-        super(MLTransformer_TIM, self).__init__()
-        self.name = "MLTransformer_TIM"
-        self.prepare = nn.Sequential(
-            nn.Conv1d(in_channels=args.feature_dim, out_channels=128, kernel_size=1, padding="same"),
-            nn.BatchNorm1d(num_features=128),
-            nn.ReLU(),
-            nn.Conv1d(in_channels=128, out_channels=args.d_model, kernel_size=1, padding="same"),
-            nn.BatchNorm1d(num_features=args.d_model),
-            nn.ReLU(),
-            Rearrange("N C L -> N L C"),
-        )
-        encoderLayer = TransformerEncoderLayer(args.d_model, args.n_head, args.d_ff, args.drop_rate,
-                                               batch_first=True)
-        self.generalFeatureExtractor = nn.ModuleList([])
-        for _ in range(args.n_layer):
-            self.generalFeatureExtractor.append(encoderLayer)
-        self.middle = nn.Sequential(
-            nn.Linear(in_features=args.n_layer, out_features=1),
-            Rearrange("N L C W-> N C (L W)"),
-            nn.BatchNorm1d(args.d_model),
-            nn.Conv1d(in_channels=args.d_model, out_channels=args.feature_dim, kernel_size=1, padding="same"),
-        )
-        self.specialFeatureExtractor = CausalConv(args)
-
-        self.Classifier = nn.Sequential(
-            Rearrange('N C L -> N (C L)'),
-            nn.Linear(in_features=args.seq_len * args.filters, out_features=1000),
-            nn.Dropout(0.3),
-            nn.Linear(in_features=1000, out_features=args.num_class),
-        )
-
-    def forward(self, x, mask=None):
-        x = self.prepare(x)
-        concat_layer = None
-        for layer in self.generalFeatureExtractor:
-            if mask is not None:
-                x = layer(x, mask)
-            else:
-                x = layer(x)
-            if concat_layer is None:
-                concat_layer = x.unsqueeze(-1)
-            else:
-                concat_layer = torch.cat([concat_layer, x.unsqueeze(-1)], dim=-1)
-        x = self.middle(concat_layer)
-        x = self.specialFeatureExtractor(x)
-        x = self.Classifier(x)
-        return x
-
-
 class Transformer(nn.Module):
     """
     基准网络测试
@@ -150,6 +96,7 @@ class Transformer(nn.Module):
             nn.ReLU(),
             Rearrange("N C L -> N L C"),
         )
+        self.pe = PositionEncoding(args.d_model, max_len=5000)
         encoderLayer = TransformerEncoderLayer(args.d_model, args.n_head, args.d_ff, args.drop_rate,
                                                batch_first=True)
         self.generalFeatureExtractor = TransformerEncoder(
@@ -167,6 +114,7 @@ class Transformer(nn.Module):
 
     def forward(self, x, mask=None):
         x = self.prepare(x)
+        # x = self.pe(x)
         if mask is not None:
             x = self.generalFeatureExtractor(x, mask)
         else:

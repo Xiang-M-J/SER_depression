@@ -202,7 +202,7 @@ class MultiTrainer:
         self.epochs = args.epochs
         self.iteration = 5000
         self.inner_iter = 20
-        self.mmd_step = 6
+        self.mmd_step = 1
         self.feature_dim = args.feature_dim
         self.batch_size = args.batch_size
         self.seq_len = args.seq_len
@@ -259,8 +259,8 @@ class MultiTrainer:
             scaler.update()
         else:
             loss, correct_num = model(x, y)
-            loss.backward()
-            optimizer.step()
+            # loss.backward()
+            # optimizer.step()
         return loss, correct_num
 
     @staticmethod
@@ -445,23 +445,25 @@ class MultiTrainer:
         arg.gamma = 0.3
         mini_iter = min([len(self.loader[i][0]) for i in range(dataset_num)])
         train_iter = [iter(self.loader[i][0]) for i in range(dataset_num)]
+        src_iter = iter(self.loader[1][0])
         src_model = torch.load(self.pretrain_path)
         src_model.eval()
         model = MModel(arg, seq_len=seq_len[0], index=0).to(device)
-        optimizer = self.get_optimizer(arg, model.parameters(), lr=arg.lr)
-        scheduler = self.get_scheduler(optimizer, arg)
         hidden = Hidden(arg).to(device)
+        parameter = [
+            {'params': model.parameters(), 'lr': arg.lr},
+            {'params': hidden.parameters(), 'lr': arg.lr}
+        ]
+        optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
+        scheduler = self.get_scheduler(optimizer, arg)
+
         parameter = [
             {'params': model.prepare.parameters(), 'lr': arg.lr},
             {'params': model.shareNet.parameters(), 'lr': arg.lr},
             {'params': hidden.parameters(), 'lr': arg.lr}
         ]
         share_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
-        share_scheduler = torch.optim.lr_scheduler.StepLR(share_optimizer, step_size=40, gamma=0.3)
-        # encoder = torch.load(self.encoder_final_path)
-        # encoder.eval()
-        # tgt_encoder = Encoder(arg).to(device)
-        # tgt_encoder.load_state_dict(encoder.state_dict())
+        share_scheduler = self.get_scheduler(share_optimizer, arg)
 
         discriminator = Discriminator(arg).to(device)
         discriminator.train()
@@ -472,8 +474,7 @@ class MultiTrainer:
             {"params": discriminator.parameters(), 'lr': arg.lr}
         ]
         disc_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
-        # disc_scheduler = self.get_scheduler(disc_optimizer, arg)
-        disc_scheduler = torch.optim.lr_scheduler.StepLR(disc_optimizer, step_size=40, gamma=0.3)
+        disc_scheduler = self.get_scheduler(disc_optimizer, arg)
 
         best_val_accuracy = 0
         metric = Metric()
@@ -486,14 +487,9 @@ class MultiTrainer:
         train_acc = 0
         train_loss = 0
         for epoch in range(self.epochs):
-
             model.train()
-            for batch in self.loader[0][0]:
-                loss, correct_num = self.train_step(model, optimizer, batch)
-                train_acc += correct_num.cpu().numpy()
-                train_loss += loss.data.item()
-
-            if (epoch + 1) % self.mmd_step == 0 and epoch < 96:
+            hidden.train()
+            if (epoch + 1) % self.mmd_step == 0:
                 m_loss = []
                 for step in range(self.inner_iter):
                     train_batch = []
@@ -504,11 +500,6 @@ class MultiTrainer:
                             train_iter[i] = iter(self.loader[i][0])
                             batch = next(train_iter[i])
                         train_batch.append(batch)
-                    mmd_loss = self.get_mmd_loss(model, src_model, hidden, train_batch)
-                    m_loss.append(mmd_loss.data.item())
-                    share_optimizer.zero_grad()
-                    mmd_loss.backward()
-                    share_optimizer.step()
                     p = epoch / self.epochs
                     domain_loss, correct_num = self.get_domain_loss(model, src_model, hidden, discriminator,
                                                                     train_batch, p)
@@ -521,7 +512,22 @@ class MultiTrainer:
                 domain_acc = domain_acc / domain_num
                 print(f"domain accuracy: {domain_acc:.3f}")
 
-                print(np.mean(m_loss))
+            for batch in self.loader[0][0]:
+                train_batch = [batch]
+                try:
+                    batch1 = next(src_iter)
+                except StopIteration:
+                    src_iter = iter(self.loader[1][0])
+                    batch1 = next(src_iter)
+                train_batch.append(batch1)
+                loss, correct_num = self.train_step(model, optimizer, batch)
+                mmd_loss = self.get_mmd_loss(model, src_model, hidden, train_batch)
+                loss = loss + mmd_loss
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                train_acc += correct_num.cpu().numpy()
+                train_loss += loss.data.item()
 
             scheduler.step()
             share_scheduler.step()

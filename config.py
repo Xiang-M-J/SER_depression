@@ -55,7 +55,7 @@ class Args:
                  d_qkv=64,
                  seq_len=313,
                  num_class=6,
-                 load_weight=True,
+                 load_weight=False,
                  ):
         """
         Args:

@@ -5,7 +5,7 @@ from einops.layers.torch import Rearrange
 
 from config import Args
 from model import TAB, TAB_DIFF, TAB_ADD, AT_TAB
-from utils import accuracy_cal
+from utils import accuracy_cal, cal_seq_len
 
 device = "cuda" if torch.cuda.is_available() else 'cpu'
 
@@ -103,7 +103,7 @@ class MModel(nn.Module):
         self.shareNet = AT_TAB(arg, num_layers, index=0)
         merge = nn.Sequential(
             nn.Linear(arg.dilation, 1),
-            nn.Dropout(0.2)
+            # nn.Dropout(0.2)
         )
         self.specialNet = nn.Sequential(
             TAB_DIFF(arg, num_layer=num_layers, index=1),
@@ -144,9 +144,9 @@ class Discriminator(nn.Module):
             nn.BatchNorm1d(arg.filters),
             # nn.MaxPool1d(2),
             nn.ReLU(),
-            # nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
-            # nn.BatchNorm1d(arg.filters),
-            # # nn.MaxPool1d(2),
+            # nn.Conv1d(in_channels=arg.filters, out_channels=8, kernel_size=3, padding="same"),
+            # nn.BatchNorm1d(8),
+            # nn.MaxPool1d(2),
             # nn.ReLU(),
             # nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
             # nn.BatchNorm1d(arg.filters),

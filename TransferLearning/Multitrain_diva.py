@@ -1,16 +1,17 @@
 import math
 import os
-import torch.nn as nn
+
 import numpy as np
+import torch.nn as nn
+import torch.optim
 from matplotlib import pyplot as plt
 from torch.autograd import Function
-import torch.optim
 from torch.cuda.amp import autocast, GradScaler
-from einops.layers.torch import Rearrange
-import torch.nn.functional as F
+from TransferLearning.DIVA import qzd, qzx, qzy
 from config import Args
-from multiModel import MModel, mmd
-from utils import get_newest_file, load_loader, NoamScheduler, Metric, EarlyStopping, accuracy_cal, cal_seq_len
+from multiModel import MModel, Discriminator, mmd
+from utils import get_newest_file, load_loader, NoamScheduler, Metric
+import torch.distributions as dist
 
 dataset_name = ['MODMA', 'CASIA']
 num_class = [2, 6]
@@ -35,107 +36,39 @@ class GRL(Function):
         return grad_output.neg() * ctx.constant, None
 
 
-class ConvBlock(nn.Module):
-    def __init__(self, in_dim, out_dim, kernel_size, pool_size):
-        super(ConvBlock, self).__init__()
-        self.conv = nn.Conv1d(in_channels=in_dim, out_channels=out_dim, kernel_size=kernel_size, padding="same")
-        self.bn = nn.BatchNorm1d(out_dim)
-        self.act = nn.ReLU()
-        self.pool = nn.MaxPool1d(pool_size)
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.pool(x)
-        x = self.bn(x)
-        x = self.act(x)
-        return x
-
-
-class UpsampleBlock(nn.Module):
-    def __init__(self, in_dim, out_dim, scale_factor, size=None):
-        super(UpsampleBlock, self).__init__()
-        self.conv = nn.Conv1d(in_channels=in_dim, out_channels=out_dim, kernel_size=3, padding="same")
-        if size is None:
-            self.upsample = nn.Upsample(scale_factor=scale_factor)
-        else:
-            self.upsample = nn.Upsample(size=size)
-        self.bn = nn.BatchNorm1d(out_dim)
-        self.act = nn.ReLU()
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.upsample(x)
-        x = self.bn(x)
-        x = self.act(x)
-        return x
-
-
-class Discriminator(nn.Module):
-    def __init__(self, arg: Args):
-        super(Discriminator, self).__init__()
-        self.net = nn.Sequential(
-            nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
-            nn.BatchNorm1d(arg.filters),
-            # nn.MaxPool1d(2),
-            nn.ReLU(),
-            # nn.Conv1d(in_channels=256, out_channels=128, kernel_size=3, padding="same"),
-            # nn.BatchNorm1d(128),
-            # # nn.MaxPool1d(2),
-            # nn.ReLU(),
-            # nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
-            # nn.BatchNorm1d(arg.filters),
-            # # nn.MaxPool1d(2),
-            # nn.ReLU(),
-            Rearrange("N C L -> N (C L)"),
-            nn.Linear(arg.seq_len * arg.filters, 100),
-            nn.Dropout(0.3),
-            nn.Linear(100, 2),
-        )
-
-    def forward(self, x, y):
-        x = self.net(x)
-        loss = F.cross_entropy(x, y)
-        correct_num = accuracy_cal(x, y)
-        return loss, correct_num
-
-
 class Hidden(nn.Module):
     def __init__(self, arg: Args):
         super(Hidden, self).__init__()
-        self.conv1 = ConvBlock(arg.filters, 64, kernel_size=3, pool_size=2)
-        self.conv2 = ConvBlock(64, 128, kernel_size=3, pool_size=2)
-        self.conv3 = ConvBlock(128, 256, kernel_size=3, pool_size=2)
-        self.conv4 = ConvBlock(256, 256, kernel_size=3, pool_size=2)
-        self.upsample1 = UpsampleBlock(256, 128, scale_factor=2)
-        self.upsample2 = UpsampleBlock(128, 64, scale_factor=2)
-        self.upsample3 = UpsampleBlock(64, arg.filters, scale_factor=2, size=arg.seq_len)
-        # self.conv1 = nn.Sequential(
-        #     nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"),
-        #     nn.BatchNorm1d(arg.filters),
-        #     nn.ReLU(),
-        # )
-        self.l1 = nn.Sequential(
-            nn.Linear(arg.seq_len, arg.seq_len),
+        self.fc1 = nn.Sequential(
+            nn.Conv1d(arg.filters, arg.filters, kernel_size=1, padding="same"),
+            nn.BatchNorm1d(arg.filters),
+            nn.ReLU(),
+            nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(arg.filters),
             nn.ReLU()
         )
-        # self.conv2 = nn.Sequential(
-        #     nn.Conv1d(arg.filters, arg.filters, kernel_size=1, padding="same"),
-        #     nn.BatchNorm1d(arg.filters),
-        #     nn.ReLU(),
-        # )
+        self.fc2 = nn.Sequential(
+            nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(arg.filters),
+            nn.ReLU(),
+            nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(arg.filters),
+            nn.ReLU()
+        )
+        self.fc3 = nn.Sequential(
+            nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(arg.filters),
+            nn.ReLU(),
+            nn.Conv1d(arg.filters, arg.filters, kernel_size=1, padding="same"),
+            nn.BatchNorm1d(arg.filters),
+            nn.ReLU()
+        )
+
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        # x = self.conv4(x)
-        x = self.upsample1(x)
-        x = self.upsample2(x)
-        x = self.upsample3(x)
-        # for i in range(2):
-        #     # x = self.conv1(x)
-        #     # x = self.conv2(x)
-        #     x = self.l1(x)
+        x = self.fc1(x)
+        x = self.fc2(x)
+        x = self.fc3(x)
         return x
 
 
@@ -147,18 +80,17 @@ class MultiTrainer:
         self.epochs = args.epochs
         self.iteration = 5000
         self.inner_iter = 20
-        self.mmd_step = 3
-        self.domain_step = 6
+        self.mmd_step = 8
         self.feature_dim = args.feature_dim
         self.batch_size = args.batch_size
         self.seq_len = args.seq_len
         self.lr = args.lr
         self.weight_decay = args.weight_decay
-        self.best_path = "models/Multi/MODMA_best.pt"
-        self.encoder_final_path = f"models/Multi/encoder.pt"
-        self.model_path = "models/Multi/MODMA.pt"
-        self.pretrain_path = "models/Multi/pretrain.pt"
-        self.pretrain_best_path = "models/Multi/pretrain_best.pt"
+        self.best_path = "../models/Multi/MODMA_best.pt"
+        self.encoder_final_path = f"../models/Multi/Encoder.pt"
+        self.model_path = "../models/Multi/MODMA.pt"
+        self.pretrain_path = "../models/Multi/pretrain.pt"
+        self.pretrain_best_path = "../models/Multi/pretrain_best.pt"
         self.pretext_epochs = 50
         args.spilt_rate = split_rate
         self.loader = []
@@ -166,6 +98,9 @@ class MultiTrainer:
             train_loader, val_loader, test_loader = \
                 load_loader(dataset_name[i], split_rate, args.batch_size, args.random_seed, version='V1', order=3)
             self.loader.append([train_loader, val_loader, test_loader])
+        self.qzd = qzd(args.filters, 256).to(device)
+        self.qzx = qzx(args.filters, 256).to(device)
+        self.qzy = qzy(args.filters, 256).to(device)
 
     def get_optimizer(self, args, parameter, lr):
         if self.optimizer_type == 0:
@@ -223,15 +158,32 @@ class MultiTrainer:
         x, y = x.to(device), y.to(device)
         return x, y
 
-    @staticmethod
-    def get_mmd_loss(model, src_model, hidden, train_batch):
+    def get_mmd_loss(self, model, src_model, hidden, train_batch, sigma):
+
         x1 = model.get_generalFeature(train_batch[0][0].to(device))
-        x2 = src_model.get_generalFeature(train_batch[1][0].to(device))
-        mmd_feature = [hidden(x1), hidden(x2)]
-        mini_shape = min([x.shape[0] for x in mmd_feature])
-        mmd_loss = mmd(mmd_feature[0][:mini_shape].view(mini_shape, -1),
-                       mmd_feature[1][:mini_shape].view(mini_shape, -1))
-        return mmd_loss
+        x2 = model.get_generalFeature(train_batch[1][0].to(device))
+        mini_shape = min(x1.shape[0], x2.shape[0])
+        x1, x2 = x1[:mini_shape], x2[:mini_shape]
+        x1 = hidden(x1)
+        x2 = hidden(x2)
+        zd_x1_loc, zd_x1_scale = self.qzd(x1)
+        zd_x2_loc, zd_x2_scale = self.qzd(x2)
+        zx_x1_loc, zx_x1_scale = self.qzx(x1)
+        zx_x2_loc, zx_x2_scale = self.qzx(x2)
+        zy_x1_loc, zy_x1_scale = self.qzy(x1)
+        zy_x2_loc, zy_x2_scale = self.qzy(x2)
+        q_x1_d, q_x2_d = dist.Normal(zd_x1_loc, zd_x1_scale), dist.Normal(zd_x2_loc, zd_x2_scale)
+        q_x1_x, q_x2_x = dist.Normal(zx_x1_loc, zx_x1_scale), dist.Normal(zx_x2_loc, zx_x2_scale)
+        q_x1_y, q_x2_y = dist.Normal(zy_x1_loc, zy_x1_scale), dist.Normal(zy_x2_loc, zy_x2_scale)
+        zd_x1, zd_x2 = q_x1_d.rsample(), q_x2_d.rsample()
+        zx_x1, zx_x2 = q_x1_x.rsample(), q_x2_x.rsample()
+        zy_x1, zy_x2 = q_x1_y.rsample(), q_x2_y.rsample()
+        zd_loss = mmd(zd_x1, zd_x2)
+        zx_loss = mmd(zx_x1, zx_x2)
+        zy_loss = mmd(zy_x1, zy_x2)
+        loss = zd_loss / (sigma[0]**2) + zx_loss / (sigma[1]**2) + zy_loss / (sigma[2]**2)\
+               + torch.log(sigma[0]) + torch.log(sigma[1]) + torch.log(sigma[2])
+        return loss
 
     @staticmethod
     def get_domain_loss(model, src_model, hidden, discriminator, train_batch, p):
@@ -239,7 +191,7 @@ class MultiTrainer:
         x2 = src_model.get_generalFeature(train_batch[1][0].to(device))
         generalFeature = [hidden(x1), hidden(x2)]
         x = torch.cat(generalFeature, dim=0)
-        label = torch.cat([torch.ones(len(train_batch[0][0])), torch.zeros(len(train_batch[1][0]))], dim=0).long()
+        label = torch.cat([torch.zeros(len(train_batch[0][0])), torch.ones(len(train_batch[1][0]))], dim=0).long()
         alpha = 2. / (1 + np.exp((-10. * p))) - 1
         x = GRL.apply(x, alpha)
         loss, correct_num_domain = discriminator(x, label.to(device))
@@ -257,104 +209,6 @@ class MultiTrainer:
     def test_step(self, model, batch):
         return self.val_step(model, batch)
 
-    def pretrain(self):
-        arg = Args()
-        arg.num_class = num_class
-        arg.epochs = 60
-        arg.step_size = 10
-        arg.gamma = 0.3
-        model = MModel(arg, index=1)
-        model = model.to(device)
-        lr = 2e-4
-
-        optimizer = self.get_optimizer(arg, model.parameters(), lr)
-        scheduler = self.get_scheduler(optimizer, arg)
-        train_num = len(self.loader[1][0].dataset)
-        val_num = len(self.loader[1][1].dataset)
-        best_val_accuracy = 0
-        metric = Metric()
-        earlystop = EarlyStopping(patience=5)
-        for epoch in range(self.epochs):
-            model.train()
-            train_acc = 0
-            train_loss = 0
-            for batch in self.loader[1][0]:
-                loss, correct_num = self.train_step(model, optimizer, batch)
-                train_acc += correct_num.cpu().numpy()
-                train_loss += loss.data.item()
-            train_acc /= train_num
-            train_loss /= math.ceil(train_num / self.batch_size)
-            metric.train_acc.append(train_acc)
-            metric.train_loss.append(train_loss)
-            print(f"epoch {epoch + 1}: train_acc: {train_acc * 100:.3f}\t train_loss: {train_loss:.4f}")
-
-            model.eval()
-            val_acc = 0
-            val_loss = 0
-
-            with torch.no_grad():
-                for batch in self.loader[1][1]:
-                    loss, correct_num = self.val_step(model, batch)
-                    val_acc += correct_num.cpu().numpy()
-                    val_loss += loss.data.item()
-            val_acc /= val_num
-            val_loss /= math.ceil(val_num / self.batch_size)
-            metric.val_acc.append(val_acc)
-            metric.val_loss.append(val_loss)
-            print(f"epoch {epoch + 1}: val_acc: {val_acc * 100:.3f}\t val_loss: {val_loss:.4f}")
-            scheduler.step()
-
-            if val_acc > best_val_accuracy:
-                print(f"val_accuracy improved from {best_val_accuracy} to {val_acc}")
-                best_val_accuracy = val_acc
-                metric.best_val_acc = [best_val_accuracy, train_acc]
-                torch.save(model, self.pretrain_best_path)
-                print(f"saving model to {self.pretrain_best_path}")
-            elif val_acc == best_val_accuracy:
-                if train_acc > metric.best_val_acc[1]:
-                    metric.best_val_acc[1] = train_acc
-                    print("update train accuracy")
-            else:
-                print(f"val_accuracy did not improve from {best_val_accuracy}")
-            plt.clf()
-            plt.plot(metric.train_acc)
-            plt.plot(metric.val_acc)
-            plt.ylabel("accuracy(%)")
-            plt.xlabel("epoch")
-            plt.title(f"train accuracy and validation accuracy")
-            plt.pause(0.02)
-            plt.ioff()  # 关闭画图的窗口
-            if earlystop(val_acc):
-                break
-
-        torch.save(model, self.pretrain_path)
-        # model = torch.load(self.pretrain_path)
-        test_acc = 0
-        test_num = len(self.loader[1][2].dataset)
-        with torch.no_grad():
-            for batch in self.loader[1][2]:
-                loss, correct_num = self.test_step(model, batch)
-                test_acc += correct_num
-        print("final path")
-        test_acc = test_acc / test_num
-        print(f"test Accuracy:{test_acc * 100:.3f}\t")
-        model = torch.load(self.pretrain_best_path)
-        test_acc = 0
-        with torch.no_grad():
-            for batch in self.loader[1][2]:
-                loss, correct_num = self.test_step(model, batch)
-                test_acc += correct_num
-        print("best path")
-        test_acc = test_acc / test_num
-        print(f"test Accuracy:{test_acc * 100:.3f}\t")
-
-    def get_fake(self, encoder, generator, x_no):
-        _, z_p, _ = encoder[0](x_no, x_no)
-        y_p = self.pseudo_label(x_no.shape[0], x_no.shape[-1]).to(device)  # 伪标签
-        fake_x = generator[0:3](torch.cat([y_p, z_p], dim=1))
-        _, fake_x, _ = generator[3](fake_x, fake_x)
-        return y_p, fake_x
-
     def train(self):
         arg.step_size = 30
         arg.gamma = 0.3
@@ -365,14 +219,28 @@ class MultiTrainer:
         model = MModel(arg, seq_len=seq_len[0], index=0).to(device)
         optimizer = self.get_optimizer(arg, model.parameters(), lr=arg.lr)
         scheduler = self.get_scheduler(optimizer, arg)
-        hidden = Hidden(arg).to(device)
+        hidden1 = Hidden(arg).to(device)
+        hidden1.train()
+        hidden2 = Hidden(arg).to(device)
+        hidden2.train()
+        sigma1 = torch.ones((1,)).to(device)
+        sigma2 = torch.ones((1,)).to(device)
+        sigma3 = torch.ones((1,)).to(device)
+        sigma1.requires_grad = True
+        sigma2.requires_grad = True
+        sigma3.requires_grad = True
         parameter = [
             {'params': model.prepare.parameters(), 'lr': arg.lr},
             {'params': model.shareNet.parameters(), 'lr': arg.lr},
-            {'params': hidden.parameters(), 'lr': arg.lr}
+            {'params': hidden1.parameters(), 'lr': arg.lr},
+            {'params': sigma1, 'lr': arg.lr},
+            {'params': sigma2, 'lr': arg.lr},
+            {'params': sigma3, 'lr': arg.lr}
         ]
-        share_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
+        # share_optimizer = torch.optim.RMSprop(parameter, lr=arg.lr, weight_decay=arg.weight_decay)
+        share_optimizer = self.get_optimizer(arg, parameter, arg.lr)
         share_scheduler = self.get_scheduler(share_optimizer, arg)
+
         # encoder = torch.load(self.encoder_final_path)
         # encoder.eval()
         # tgt_encoder = Encoder(arg).to(device)
@@ -383,12 +251,20 @@ class MultiTrainer:
         parameter = [
             {'params': model.prepare.parameters(), 'lr': arg.lr},
             {'params': model.shareNet.parameters(), 'lr': arg.lr},
-            {"params": hidden.parameters(), 'lr': arg.lr},
+            {"params": hidden1.parameters(), 'lr': arg.lr},
             {"params": discriminator.parameters(), 'lr': arg.lr}
         ]
-        disc_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
+        disc_optimizer = self.get_optimizer(arg, parameter, arg.lr)
         disc_scheduler = self.get_scheduler(disc_optimizer, arg)
 
+        parameter = [
+            {'params': model.specialNet.parameters(), 'lr': arg.lr},
+            # {'params': model.shareNet.parameters(), 'lr': arg.lr},
+            # {'params': model.prepare.parameters(), 'lr': arg.lr},
+            # {'params': hidden2.parameters(), 'lr': arg.lr},
+        ]
+        special_optimizer = self.get_optimizer(arg, parameter, arg.lr)
+        special_scheduler = self.get_scheduler(special_optimizer, arg)
         best_val_accuracy = 0
         metric = Metric()
         train_num = 0
@@ -402,6 +278,11 @@ class MultiTrainer:
         for epoch in range(self.epochs):
 
             model.train()
+            for batch in self.loader[0][0]:
+                loss, correct_num = self.train_step(model, optimizer, batch)
+                train_acc += correct_num.cpu().numpy()
+                train_loss += loss.data.item()
+
             if (epoch + 1) % self.mmd_step == 0:
                 m_loss = []
                 for step in range(self.inner_iter):
@@ -413,42 +294,36 @@ class MultiTrainer:
                             train_iter[i] = iter(self.loader[i][0])
                             batch = next(train_iter[i])
                         train_batch.append(batch)
-                    mmd_loss = self.get_mmd_loss(model, src_model, hidden, train_batch)
+                    mmd_loss = self.get_mmd_loss(model, src_model, hidden1, train_batch, [sigma1, sigma2, sigma3])
                     m_loss.append(mmd_loss.data.item())
                     share_optimizer.zero_grad()
                     mmd_loss.backward()
                     share_optimizer.step()
 
-            if (epoch + 1) % self.domain_step == 0:
-                for step in range(self.inner_iter):
-                    train_batch = []
-                    for i in range(dataset_num):
-                        try:
-                            batch = next(train_iter[i])
-                        except StopIteration:
-                            train_iter[i] = iter(self.loader[i][0])
-                            batch = next(train_iter[i])
-                        train_batch.append(batch)
-                    p = epoch / self.epochs
-                    domain_loss, correct_num = self.get_domain_loss(model, src_model, hidden, discriminator,
-                                                                    train_batch, p)
-                    disc_optimizer.zero_grad()
-                    domain_loss.backward()
-                    disc_optimizer.step()
+                    # p = epoch / self.epochs
+                    # domain_loss, correct_num = self.get_domain_loss(model, src_model, hidden1, discriminator,
+                    #                                                 train_batch, p)
+                    # disc_optimizer.zero_grad()
+                    # domain_loss.backward()
+                    # disc_optimizer.step()
                     domain_acc += correct_num.cpu().numpy()
                     domain_num += len(train_batch[1][0])
                     domain_num += len(train_batch[0][0])
+
+                    # special_loss = self.get_special_loss(model, src_model, hidden2, train_batch)
+                    # special_optimizer.zero_grad()
+                    # special_loss.backward()
+                    # special_optimizer.step()
+
                 domain_acc = domain_acc / domain_num
                 print(f"domain accuracy: {domain_acc:.3f}")
 
-            for batch in self.loader[0][0]:
-                loss, correct_num = self.train_step(model, optimizer, batch)
-                train_acc += correct_num.cpu().numpy()
-                train_loss += loss.data.item()
+                print(np.mean(m_loss))
 
             scheduler.step()
             share_scheduler.step()
             disc_scheduler.step()
+            special_scheduler.step()
             print(f"epoch {epoch + 1}:")
             train_acc = train_acc / len(self.loader[0][0].dataset)
             train_loss = train_loss / mini_iter
@@ -491,13 +366,13 @@ class MultiTrainer:
             val_loss = 0
             train_acc = 0
             train_loss = 0
-        np.save("results/data/Multi/MODMA.npy", metric.item())
+        np.save("../results/data/Multi/MODMA.npy", metric.item())
         torch.save(model, self.model_path)
 
     def test(self, path=None):
 
         if path is None:
-            path = get_newest_file("models/Multi/")
+            path = get_newest_file("../models/Multi/")
             print(f"path is None, choose the newest model: {path}")
         if not os.path.exists(path):
             print(f"error! cannot find the {path}")
@@ -538,7 +413,7 @@ class MultiTrainer:
         print(f"{dataset_name}: test Loss:{test_loss:.4f}\t test Accuracy:{test_acc * 100:.3f}\t")
         metric.test_acc.append(test_acc)
         metric.test_loss.append(test_loss)
-        np.save("results/data/Multi/test.npy", metric.item())
+        np.save("../results/data/Multi/test.npy", metric.item())
 
 
 if __name__ == "__main__":

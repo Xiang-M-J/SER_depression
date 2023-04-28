@@ -288,7 +288,7 @@ class TAB_Attention_MH(nn.Module):
 
 class TAB_Attention_AF(nn.Module):
     """
-    MH
+    AFT_Local
     """
 
     def __init__(self, args: Args):
@@ -297,7 +297,29 @@ class TAB_Attention_AF(nn.Module):
             Rearrange("N C L -> N L C")
         )
         self.attn = AFTLocalAttention(128, args.seq_len, 64)
-        # self.attn = AFTSimpleAttention(128)   # AFTLocal的效果更好
+        self.ff = feedForward(128, 1024)
+        self.out_proj = nn.Sequential(
+            Rearrange("N L C -> N C L")
+        )
+
+    def forward(self, x, mask=None):
+        x = self.in_proj(x)
+        x, attn = self.attn(x, x, x, mask)
+        # x = self.ff(x)
+        return self.out_proj(x)
+
+
+class TAB_Attention_AFS(nn.Module):
+    """
+    AFT_Simple
+    """
+
+    def __init__(self, args: Args):
+        super(TAB_Attention_AFS, self).__init__()
+        self.in_proj = nn.Sequential(
+            Rearrange("N C L -> N L C")
+        )
+        self.attn = AFTSimpleAttention(128)  # AFTLocal的效果更好
         self.ff = feedForward(128, 1024)
         self.out_proj = nn.Sequential(
             Rearrange("N L C -> N C L")
@@ -537,18 +559,18 @@ class TAB_DIFF(nn.Module):
         return stack_layer, x
 
 
-class MultiTIM(nn.Module):
+class MTCN(nn.Module):
     """
     old result:
-    MultiTIM: 当generalExtractor和specialExtractor使用初始化参数，只训练prepare attn classifier 测试集准确率 89.326%
-    MultiTIM: 当generalExtractor和specialExtractor使用IEMOCAP_V1预训练模型参数，只训练prepare attn classifier 测试集准确率 95.225%
-    MultiTIM: 当generalExtractor和specialExtractor使用IEMOCAP_V2预训练模型参数，只训练prepare attn classifier 测试集准确率 97.753%
-    MultiTIM: 当generalExtractor和specialExtractor使用DAIC_V1预训练模型参数，只训练prepare attn classifier 测试集准确率 94.382%
+    MTCN: 当generalExtractor和specialExtractor使用初始化参数，只训练prepare attn classifier 测试集准确率 89.326%
+    MTCN: 当generalExtractor和specialExtractor使用IEMOCAP_V1预训练模型参数，只训练prepare attn classifier 测试集准确率 95.225%
+    MTCN: 当generalExtractor和specialExtractor使用IEMOCAP_V2预训练模型参数，只训练prepare attn classifier 测试集准确率 97.753%
+    MTCN: 当generalExtractor和specialExtractor使用DAIC_V1预训练模型参数，只训练prepare attn classifier 测试集准确率 94.382%
     """
 
     def __init__(self, args: Args, num_layers=None):
-        super(MultiTIM, self).__init__()
-        self.name = "MultiTIM"
+        super(MTCN, self).__init__()
+        self.name = "MTCN"
         if num_layers is None:
             num_layers = [3, 5]
         self.prepare = nn.Sequential(
@@ -577,7 +599,7 @@ class MultiTIM(nn.Module):
         # Linear
         self.merge = nn.Sequential(
             nn.Linear(args.dilation, 1),
-            nn.Dropout(0.3)
+            # nn.Dropout(0.3)
         )
         # self.classifier = nn.Sequential(
         #     Rearrange('N L C  -> N C L'),
@@ -589,6 +611,8 @@ class MultiTIM(nn.Module):
         self.classifier = nn.Sequential(
             Rearrange("N C L H -> N C (L H)"),
             nn.AdaptiveAvgPool1d(1),
+            # nn.Linear(args.seq_len, 1),
+            # nn.Dropout(0.5),
             Rearrange('N C L -> N (C L)'),
             nn.Linear(in_features=args.filters, out_features=args.num_class)
         )

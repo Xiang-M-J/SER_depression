@@ -75,6 +75,9 @@ class Temporal_Aware_Block(nn.Module):
         dropout2 = SpatialDropout(dropout)
         # dropout2 = nn.Dropout(dropout)
 
+        # self.casual = nn.Sequential(
+        #     conv1, chomp1, act1, dropout1, conv2, chomp2, act2, dropout2
+        # )
         self.casual = nn.Sequential(
             conv1, chomp1, bn1, act1, dropout1, conv2, chomp2, bn2, act2, dropout2
         )

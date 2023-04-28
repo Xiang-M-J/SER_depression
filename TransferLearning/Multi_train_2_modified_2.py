@@ -46,8 +46,8 @@ class MultiTrainer:
         self.batch_size = args.batch_size
         self.lr = args.lr
         self.weight_decay = args.weight_decay
-        self.best_path = "models/Multi/MODMA_best.pt"
-        self.model_path = "models/Multi/MODMA.pt"
+        self.best_path = "../models/Multi/MODMA_best.pt"
+        self.model_path = "../models/Multi/MODMA.pt"
         args.spilt_rate = split_rate
         self.loader = []
         for i in range(dataset_num):
@@ -237,13 +237,13 @@ class MultiTrainer:
             val_loss = 0
             train_acc = 0
             train_loss = 0
-        np.save("results/data/Multi/MODMA.npy", metric.item())
+        np.save("../results/data/Multi/MODMA.npy", metric.item())
         torch.save(model, self.model_path)
 
     def test(self, path=None):
 
         if path is None:
-            path = get_newest_file("models/Multi/")
+            path = get_newest_file("../models/Multi/")
             print(f"path is None, choose the newest model: {path}")
         if not os.path.exists(path):
             print(f"error! cannot find the {path}")
@@ -284,7 +284,7 @@ class MultiTrainer:
         print(f"{dataset_name}: test Loss:{test_loss:.4f}\t test Accuracy:{test_acc * 100:.3f}\t")
         metric.test_acc.append(test_acc)
         metric.test_loss.append(test_loss)
-        np.save("results/data/Multi/test.npy", metric.item())
+        np.save("../results/data/Multi/test.npy", metric.item())
 
 
 if __name__ == "__main__":

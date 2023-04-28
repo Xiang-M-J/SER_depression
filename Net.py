@@ -9,9 +9,9 @@ from sklearn.metrics import classification_report, confusion_matrix
 from tensorboardX import SummaryWriter
 from torch.utils.data import dataloader
 
-from baseline import TIM, SET, Transformer_TIM, MLTransformer_TIM, Transformer, LSTM, TemporalConvNet, MLP
+from baseline import TIM, SET, Transformer_TIM, Transformer, LSTM, TemporalConvNet, MLP
 from config import Args
-from model import AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM, MultiTIM
+from model import AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM, MTCN
 from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, plot, logger, EarlyStopping, \
     IEMOCAP_LABELS, NoamScheduler, ModelSave
 
@@ -70,8 +70,6 @@ class Net_Instance:
             model = SET(self.args)
         elif self.model_type == "Transformer_TIM":
             model = Transformer_TIM(self.args)
-        elif self.model_type == "MLTransformer_TIM":
-            model = MLTransformer_TIM(self.args)
         elif self.model_type == "Transformer":
             model = Transformer(self.args)
         elif self.model_type == "AT_TIM":
@@ -80,8 +78,8 @@ class Net_Instance:
             model = Transformer_DeltaTIM(self.args)
         elif self.model_type == "AT_DeltaTIM":
             model = AT_DeltaTIM(self.args)
-        elif self.model_type == "MultiTIM":
-            model = MultiTIM(self.args)
+        elif self.model_type == "MTCN":
+            model = MTCN(self.args)
         elif self.model_type == "MLP":
             model = MLP(self.args)
         elif self.model_type == "LSTM":
@@ -183,7 +181,7 @@ class Net_Instance:
 
         loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=0.1).to(device)  # label_smoothing=0.1 相当于smooth_labels的功能
         early_stop = EarlyStopping(patience=self.args.patience)
-        model_save = ModelSave(save_path=self.save_path, )
+        # model_save = ModelSave(save_path=self.save_path, )
         scheduler = self.get_scheduler(optimizer, arg=self.args)
         best_val_accuracy = 0
         model = model.to(device)
