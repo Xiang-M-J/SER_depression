@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from einops.layers.torch import Rearrange
 
-from blocks import WeightLayer, Temporal_Aware_Block, Temporal_Aware_Block_simple
+from blocks import WeightLayer, Temporal_Aware_Block
 from TransformerEncoder import TransformerEncoder, TransformerEncoderLayer
 from attention import MultiHeadAttention, AFTLocalAttention, get_attention, AFTSimpleAttention
 from Transformer import feedForward
@@ -30,8 +30,8 @@ class AT_TIM(nn.Module):
             args.dilation = 8
         for i in [2 ** i for i in range(args.dilation)]:
             self.dilation_layer.append(
-                Temporal_Aware_Block_simple(feature_dim=args.filters, filters=args.filters,
-                                            kernel_size=args.kernel_size, dilation=i, dropout=args.drop_rate)
+                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters,
+                                     kernel_size=args.kernel_size, dilation=i, dropout=args.drop_rate)
             )
         self.drop = nn.Dropout(p=args.drop_rate)
 
@@ -506,8 +506,6 @@ class AT_TAB(nn.Module):
             self.net.append(
                 Temporal_Aware_Block(feature_dim=128, filters=128, kernel_size=args.kernel_size,
                                      dilation=i, dropout=args.drop_rate)
-                # Temporal_Aware_Block(args.filters, args.filters, kernel_size=args.kernel_size, dilation=i,
-                #                      dropout=args.drop_rate)
             )
         self.out_proj1 = nn.Sequential(
             nn.Conv1d(128, args.filters, kernel_size=1),

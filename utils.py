@@ -866,7 +866,7 @@ def log_model(model, val_acc):
 
 def model_structure(model_path, save_path=None):
     """
-    查看模型结构
+    查看并打印模型结构
     """
     if not os.path.exists(model_path):
         print(f"cannot find path:{model_path}")
@@ -916,7 +916,7 @@ def model_structure(model_path, save_path=None):
 
 def mask_input(x, p):
     """
-    对输入进行遮盖
+    对输入进行随机遮盖
 
     Args:
         x: 输入特征
@@ -935,5 +935,5 @@ if __name__ == "__main__":
     # args = Args()
     # plot_noam(args=args)
     model_structure(
-        model_path="models/MultiTIM_AT_DIFF_MODMA_order3_drop1_mfcc_epoch100_l2re1_lr0004_pretrainFalse_clusterFalse.pt")
+        model_path="models/MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse.pt")
     pass

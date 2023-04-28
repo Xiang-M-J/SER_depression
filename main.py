@@ -1,4 +1,4 @@
-from Net import Net_Instance
+from Net import Net_Agent
 
 from config import Args
 from utils import load_dataset, get_newest_file
@@ -19,18 +19,18 @@ if __name__ == "__main__":
     print("dataset name: ", args.dataset_name)
     print("model type: ", args.model_type)
     if model_type == "MTCN":
-        model_name = f"{model_type}_{args.multi_type}_{args.dataset_name}_order{args.order}_drop{str(args.drop_rate).split('.')[-1]}_{args.data_type}_epoch{args.epochs}_l2re{str(args.weight_decay).split('.')[-1]}_lr{str(args.lr).split('.')[-1]}_pretrain{args.load_weight}_cluster{args.is_cluster}"
+        model_name = f"{model_type}_{args.multi_type}_{args.dataset_name}_order{args.order}_drop{str(args.drop_rate).split('.')[-1]}_epoch{args.epochs}_l2re{str(args.weight_decay).split('.')[-1]}_lr{str(args.lr).split('.')[-1]}_pretrain{args.load_weight}_cluster{args.is_cluster}"
     else:
-        model_name = f"{model_type}_{args.dataset_name}_order{args.order}_drop{str(args.drop_rate).split('.')[-1]}_{args.data_type}_epoch{args.epochs}_l2re{str(args.weight_decay).split('.')[-1]}_lr{str(args.lr).split('.')[-1]}_pretrain{args.load_weight}_cluster{args.is_cluster}"
+        model_name = f"{model_type}_{args.dataset_name}_order{args.order}_drop{str(args.drop_rate).split('.')[-1]}_epoch{args.epochs}_l2re{str(args.weight_decay).split('.')[-1]}_lr{str(args.lr).split('.')[-1]}_pretrain{args.load_weight}_cluster{args.is_cluster}"
     option = input(f"{args.save} model name: {model_name}, (y(default)/n):")
     if option == '' or option == 'y' or option == 'yes' or option is None:
         args.model_name = model_name
         train_dataset, val_dataset, test_dataset = load_dataset(
             dataset_name, spilt_rate, args.random_seed, order=args.order, version="V1", is_cluster=args.is_cluster)
         args.seq_len = train_dataset[0][0].shape[-1]
-        instance = Net_Instance(args)
-        instance.train(train_dataset, val_dataset)
-        instance.test(test_dataset, model_path=None)
-        # instance.multi_test(test_dataset)
+        agent = Net_Agent(args)
+        agent.train(train_dataset, val_dataset)
+        agent.test(test_dataset, model_path=None)
+        # agent.multi_test(test_dataset)
     else:
         print("请修改模型名后再次执行")

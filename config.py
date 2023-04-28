@@ -45,7 +45,6 @@ class Args:
                  kernel_size=2,
                  drop_rate=0.1,
                  dilation=8,
-                 is_weight=False,
                  is_cluster=False,
                  is_mask=False,
                  d_model=256,
@@ -120,7 +119,6 @@ class Args:
         self.filters = self.order * 13
         self.kernel_size = kernel_size
         self.drop_rate = drop_rate
-        self.is_weight = is_weight
         # CasualConv end
         self.seq_len = seq_len
         self.num_class = num_class

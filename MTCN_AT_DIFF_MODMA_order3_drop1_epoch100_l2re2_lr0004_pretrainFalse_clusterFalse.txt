@@ -1,0 +1,998 @@
+------------------------------------------------------------------------------------------
+|           weight name          |               weight shape               |   number   |
+------------------------------------------------------------------------------------------
+| prepare.0.weight                         | torch.Size([39, 39, 1])        | 1521       |
+| prepare.0.bias                           | torch.Size([39])               | 39         |
+| prepare.1.weight                         | torch.Size([39])               | 39         |
+| prepare.1.bias                           | torch.Size([39])               | 39         |
+| generalExtractor.in_proj.0.weight        | torch.Size([128, 39, 1])       | 4992       |
+| generalExtractor.in_proj.0.bias          | torch.Size([128])              | 128        |
+| generalExtractor.in_proj.1.weight        | torch.Size([128])              | 128        |
+| generalExtractor.in_proj.1.bias          | torch.Size([128])              | 128        |
+| generalExtractor.net.0.casual.0.weight   | torch.Size([128, 128, 2])      | 32768      |
+| generalExtractor.net.0.casual.0.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.0.casual.2.weight   | torch.Size([128])              | 128        |
+| generalExtractor.net.0.casual.2.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.0.casual.5.weight   | torch.Size([128, 128, 2])      | 32768      |
+| generalExtractor.net.0.casual.5.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.0.casual.7.weight   | torch.Size([128])              | 128        |
+| generalExtractor.net.0.casual.7.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.0.resample.weight   | torch.Size([128, 128, 1])      | 16384      |
+| generalExtractor.net.0.resample.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.1.casual.0.weight   | torch.Size([128, 128, 2])      | 32768      |
+| generalExtractor.net.1.casual.0.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.1.casual.2.weight   | torch.Size([128])              | 128        |
+| generalExtractor.net.1.casual.2.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.1.casual.5.weight   | torch.Size([128, 128, 2])      | 32768      |
+| generalExtractor.net.1.casual.5.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.1.casual.7.weight   | torch.Size([128])              | 128        |
+| generalExtractor.net.1.casual.7.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.1.resample.weight   | torch.Size([128, 128, 1])      | 16384      |
+| generalExtractor.net.1.resample.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.2.casual.0.weight   | torch.Size([128, 128, 2])      | 32768      |
+| generalExtractor.net.2.casual.0.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.2.casual.2.weight   | torch.Size([128])              | 128        |
+| generalExtractor.net.2.casual.2.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.2.casual.5.weight   | torch.Size([128, 128, 2])      | 32768      |
+| generalExtractor.net.2.casual.5.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.2.casual.7.weight   | torch.Size([128])              | 128        |
+| generalExtractor.net.2.casual.7.bias     | torch.Size([128])              | 128        |
+| generalExtractor.net.2.resample.weight   | torch.Size([128, 128, 1])      | 16384      |
+| generalExtractor.net.2.resample.bias     | torch.Size([128])              | 128        |
+| generalExtractor.attn.attn.Wq.weight     | torch.Size([128, 128])         | 16384      |
+| generalExtractor.attn.attn.Wk.weight     | torch.Size([128, 128])         | 16384      |
+| generalExtractor.attn.attn.Wv.weight     | torch.Size([128, 128])         | 16384      |
+| generalExtractor.attn.attn.fc.weight     | torch.Size([128, 128])         | 16384      |
+| generalExtractor.attn.attn.layer.weight  | torch.Size([128])              | 128        |
+| generalExtractor.attn.attn.layer.bias    | torch.Size([128])              | 128        |
+| generalExtractor.out_proj1.0.weight      | torch.Size([39, 128, 1])       | 4992       |
+| generalExtractor.out_proj1.0.bias        | torch.Size([39])               | 39         |
+| generalExtractor.out_proj1.1.weight      | torch.Size([39])               | 39         |
+| generalExtractor.out_proj1.1.bias        | torch.Size([39])               | 39         |
+| generalExtractor.out_proj2.0.weight      | torch.Size([39, 128, 1, 1])    | 4992       |
+| generalExtractor.out_proj2.0.bias        | torch.Size([39])               | 39         |
+| generalExtractor.out_proj2.1.weight      | torch.Size([39])               | 39         |
+| generalExtractor.out_proj2.1.bias        | torch.Size([39])               | 39         |
+| specialExtractor.net.0.casual.0.weight   | torch.Size([39, 39, 2])        | 3042       |
+| specialExtractor.net.0.casual.0.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.0.casual.2.weight   | torch.Size([39])               | 39         |
+| specialExtractor.net.0.casual.2.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.0.casual.5.weight   | torch.Size([39, 39, 2])        | 3042       |
+| specialExtractor.net.0.casual.5.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.0.casual.7.weight   | torch.Size([39])               | 39         |
+| specialExtractor.net.0.casual.7.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.0.resample.weight   | torch.Size([39, 39, 1])        | 1521       |
+| specialExtractor.net.0.resample.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.1.casual.0.weight   | torch.Size([39, 39, 2])        | 3042       |
+| specialExtractor.net.1.casual.0.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.1.casual.2.weight   | torch.Size([39])               | 39         |
+| specialExtractor.net.1.casual.2.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.1.casual.5.weight   | torch.Size([39, 39, 2])        | 3042       |
+| specialExtractor.net.1.casual.5.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.1.casual.7.weight   | torch.Size([39])               | 39         |
+| specialExtractor.net.1.casual.7.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.1.resample.weight   | torch.Size([39, 39, 1])        | 1521       |
+| specialExtractor.net.1.resample.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.2.casual.0.weight   | torch.Size([39, 39, 2])        | 3042       |
+| specialExtractor.net.2.casual.0.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.2.casual.2.weight   | torch.Size([39])               | 39         |
+| specialExtractor.net.2.casual.2.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.2.casual.5.weight   | torch.Size([39, 39, 2])        | 3042       |
+| specialExtractor.net.2.casual.5.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.2.casual.7.weight   | torch.Size([39])               | 39         |
+| specialExtractor.net.2.casual.7.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.2.resample.weight   | torch.Size([39, 39, 1])        | 1521       |
+| specialExtractor.net.2.resample.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.3.casual.0.weight   | torch.Size([39, 39, 2])        | 3042       |
+| specialExtractor.net.3.casual.0.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.3.casual.2.weight   | torch.Size([39])               | 39         |
+| specialExtractor.net.3.casual.2.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.3.casual.5.weight   | torch.Size([39, 39, 2])        | 3042       |
+| specialExtractor.net.3.casual.5.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.3.casual.7.weight   | torch.Size([39])               | 39         |
+| specialExtractor.net.3.casual.7.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.3.resample.weight   | torch.Size([39, 39, 1])        | 1521       |
+| specialExtractor.net.3.resample.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.4.casual.0.weight   | torch.Size([39, 39, 2])        | 3042       |
+| specialExtractor.net.4.casual.0.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.4.casual.2.weight   | torch.Size([39])               | 39         |
+| specialExtractor.net.4.casual.2.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.4.casual.5.weight   | torch.Size([39, 39, 2])        | 3042       |
+| specialExtractor.net.4.casual.5.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.4.casual.7.weight   | torch.Size([39])               | 39         |
+| specialExtractor.net.4.casual.7.bias     | torch.Size([39])               | 39         |
+| specialExtractor.net.4.resample.weight   | torch.Size([39, 39, 1])        | 1521       |
+| specialExtractor.net.4.resample.bias     | torch.Size([39])               | 39         |
+| merge.0.weight                           | torch.Size([1, 8])             | 8          |
+| merge.0.bias                             | torch.Size([1])                | 1          |
+| classifier.3.weight                      | torch.Size([2, 39])            | 78         |
+| classifier.3.bias                        | torch.Size([2])                | 2          |
+------------------------------------------------------------------------------------------
+The total number of parameters: 370951
+The parameters of Model MTCN: 0.370951M 
+------------------------------------------------------------------------------------------
+('', MTCN(
+  (prepare): Sequential(
+    (0): Conv1d(39, 39, kernel_size=(1,), stride=(1,))
+    (1): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): ReLU()
+  )
+  (generalExtractor): AT_TAB(
+    (in_proj): Sequential(
+      (0): Conv1d(39, 128, kernel_size=(1,), stride=(1,))
+      (1): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+    (net): ModuleList(
+      (0): Temporal_Aware_Block(
+        (casual): Sequential(
+          (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(1,))
+          (1): Chomp1d()
+          (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (3): ReLU()
+          (4): SpatialDropout()
+          (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(1,))
+          (6): Chomp1d()
+          (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (8): ReLU()
+          (9): SpatialDropout()
+        )
+        (resample): Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same)
+        (act3): Sigmoid()
+      )
+      (1): Temporal_Aware_Block(
+        (casual): Sequential(
+          (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(2,), dilation=(2,))
+          (1): Chomp1d()
+          (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (3): ReLU()
+          (4): SpatialDropout()
+          (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(2,), dilation=(2,))
+          (6): Chomp1d()
+          (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (8): ReLU()
+          (9): SpatialDropout()
+        )
+        (resample): Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same)
+        (act3): Sigmoid()
+      )
+      (2): Temporal_Aware_Block(
+        (casual): Sequential(
+          (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(4,), dilation=(4,))
+          (1): Chomp1d()
+          (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (3): ReLU()
+          (4): SpatialDropout()
+          (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(4,), dilation=(4,))
+          (6): Chomp1d()
+          (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (8): ReLU()
+          (9): SpatialDropout()
+        )
+        (resample): Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same)
+        (act3): Sigmoid()
+      )
+    )
+    (attn): TAB_Attention_MH(
+      (in_proj): Sequential(
+        (0): Rearrange('N C L -> N L C')
+      )
+      (attn): MultiHeadAttention(
+        (Wq): Linear(in_features=128, out_features=128, bias=False)
+        (Wk): Linear(in_features=128, out_features=128, bias=False)
+        (Wv): Linear(in_features=128, out_features=128, bias=False)
+        (fc): Linear(in_features=128, out_features=128, bias=False)
+        (attention): DotScore(
+          (softmax): Softmax(dim=-1)
+        )
+        (layer): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+      (out_proj): Sequential(
+        (0): Rearrange('N L C -> N C L')
+      )
+    )
+    (out_proj1): Sequential(
+      (0): Conv1d(128, 39, kernel_size=(1,), stride=(1,))
+      (1): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+    (out_proj2): Sequential(
+      (0): Conv2d(128, 39, kernel_size=(1, 1), stride=(1, 1))
+      (1): BatchNorm2d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    )
+  )
+  (specialExtractor): TAB_DIFF(
+    (net): ModuleList(
+      (0): Temporal_Aware_Block(
+        (casual): Sequential(
+          (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(8,), dilation=(8,))
+          (1): Chomp1d()
+          (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (3): ReLU()
+          (4): SpatialDropout()
+          (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(8,), dilation=(8,))
+          (6): Chomp1d()
+          (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (8): ReLU()
+          (9): SpatialDropout()
+        )
+        (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+        (act3): Sigmoid()
+      )
+      (1): Temporal_Aware_Block(
+        (casual): Sequential(
+          (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(16,), dilation=(16,))
+          (1): Chomp1d()
+          (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (3): ReLU()
+          (4): SpatialDropout()
+          (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(16,), dilation=(16,))
+          (6): Chomp1d()
+          (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (8): ReLU()
+          (9): SpatialDropout()
+        )
+        (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+        (act3): Sigmoid()
+      )
+      (2): Temporal_Aware_Block(
+        (casual): Sequential(
+          (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(32,), dilation=(32,))
+          (1): Chomp1d()
+          (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (3): ReLU()
+          (4): SpatialDropout()
+          (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(32,), dilation=(32,))
+          (6): Chomp1d()
+          (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (8): ReLU()
+          (9): SpatialDropout()
+        )
+        (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+        (act3): Sigmoid()
+      )
+      (3): Temporal_Aware_Block(
+        (casual): Sequential(
+          (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(64,), dilation=(64,))
+          (1): Chomp1d()
+          (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (3): ReLU()
+          (4): SpatialDropout()
+          (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(64,), dilation=(64,))
+          (6): Chomp1d()
+          (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (8): ReLU()
+          (9): SpatialDropout()
+        )
+        (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+        (act3): Sigmoid()
+      )
+      (4): Temporal_Aware_Block(
+        (casual): Sequential(
+          (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(128,), dilation=(128,))
+          (1): Chomp1d()
+          (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (3): ReLU()
+          (4): SpatialDropout()
+          (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(128,), dilation=(128,))
+          (6): Chomp1d()
+          (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (8): ReLU()
+          (9): SpatialDropout()
+        )
+        (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+        (act3): Sigmoid()
+      )
+    )
+  )
+  (merge): Sequential(
+    (0): Linear(in_features=8, out_features=1, bias=True)
+  )
+  (classifier): Sequential(
+    (0): Rearrange('N C L H -> N C (L H)')
+    (1): AdaptiveAvgPool1d(output_size=1)
+    (2): Rearrange('N C L -> N (C L)')
+    (3): Linear(in_features=39, out_features=2, bias=True)
+  )
+))
+('prepare', Sequential(
+  (0): Conv1d(39, 39, kernel_size=(1,), stride=(1,))
+  (1): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (2): ReLU()
+))
+('prepare.0', Conv1d(39, 39, kernel_size=(1,), stride=(1,)))
+('prepare.1', BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('prepare.2', ReLU())
+('generalExtractor', AT_TAB(
+  (in_proj): Sequential(
+    (0): Conv1d(39, 128, kernel_size=(1,), stride=(1,))
+    (1): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (net): ModuleList(
+    (0): Temporal_Aware_Block(
+      (casual): Sequential(
+        (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(1,))
+        (1): Chomp1d()
+        (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (3): ReLU()
+        (4): SpatialDropout()
+        (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(1,))
+        (6): Chomp1d()
+        (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (8): ReLU()
+        (9): SpatialDropout()
+      )
+      (resample): Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same)
+      (act3): Sigmoid()
+    )
+    (1): Temporal_Aware_Block(
+      (casual): Sequential(
+        (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(2,), dilation=(2,))
+        (1): Chomp1d()
+        (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (3): ReLU()
+        (4): SpatialDropout()
+        (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(2,), dilation=(2,))
+        (6): Chomp1d()
+        (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (8): ReLU()
+        (9): SpatialDropout()
+      )
+      (resample): Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same)
+      (act3): Sigmoid()
+    )
+    (2): Temporal_Aware_Block(
+      (casual): Sequential(
+        (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(4,), dilation=(4,))
+        (1): Chomp1d()
+        (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (3): ReLU()
+        (4): SpatialDropout()
+        (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(4,), dilation=(4,))
+        (6): Chomp1d()
+        (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (8): ReLU()
+        (9): SpatialDropout()
+      )
+      (resample): Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same)
+      (act3): Sigmoid()
+    )
+  )
+  (attn): TAB_Attention_MH(
+    (in_proj): Sequential(
+      (0): Rearrange('N C L -> N L C')
+    )
+    (attn): MultiHeadAttention(
+      (Wq): Linear(in_features=128, out_features=128, bias=False)
+      (Wk): Linear(in_features=128, out_features=128, bias=False)
+      (Wv): Linear(in_features=128, out_features=128, bias=False)
+      (fc): Linear(in_features=128, out_features=128, bias=False)
+      (attention): DotScore(
+        (softmax): Softmax(dim=-1)
+      )
+      (layer): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+    )
+    (out_proj): Sequential(
+      (0): Rearrange('N L C -> N C L')
+    )
+  )
+  (out_proj1): Sequential(
+    (0): Conv1d(128, 39, kernel_size=(1,), stride=(1,))
+    (1): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+  (out_proj2): Sequential(
+    (0): Conv2d(128, 39, kernel_size=(1, 1), stride=(1, 1))
+    (1): BatchNorm2d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+))
+('generalExtractor.in_proj', Sequential(
+  (0): Conv1d(39, 128, kernel_size=(1,), stride=(1,))
+  (1): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+))
+('generalExtractor.in_proj.0', Conv1d(39, 128, kernel_size=(1,), stride=(1,)))
+('generalExtractor.in_proj.1', BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('generalExtractor.net', ModuleList(
+  (0): Temporal_Aware_Block(
+    (casual): Sequential(
+      (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(1,))
+      (1): Chomp1d()
+      (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (3): ReLU()
+      (4): SpatialDropout()
+      (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(1,))
+      (6): Chomp1d()
+      (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (8): ReLU()
+      (9): SpatialDropout()
+    )
+    (resample): Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same)
+    (act3): Sigmoid()
+  )
+  (1): Temporal_Aware_Block(
+    (casual): Sequential(
+      (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(2,), dilation=(2,))
+      (1): Chomp1d()
+      (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (3): ReLU()
+      (4): SpatialDropout()
+      (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(2,), dilation=(2,))
+      (6): Chomp1d()
+      (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (8): ReLU()
+      (9): SpatialDropout()
+    )
+    (resample): Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same)
+    (act3): Sigmoid()
+  )
+  (2): Temporal_Aware_Block(
+    (casual): Sequential(
+      (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(4,), dilation=(4,))
+      (1): Chomp1d()
+      (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (3): ReLU()
+      (4): SpatialDropout()
+      (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(4,), dilation=(4,))
+      (6): Chomp1d()
+      (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (8): ReLU()
+      (9): SpatialDropout()
+    )
+    (resample): Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same)
+    (act3): Sigmoid()
+  )
+))
+('generalExtractor.net.0', Temporal_Aware_Block(
+  (casual): Sequential(
+    (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(1,))
+    (1): Chomp1d()
+    (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): ReLU()
+    (4): SpatialDropout()
+    (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(1,))
+    (6): Chomp1d()
+    (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (8): ReLU()
+    (9): SpatialDropout()
+  )
+  (resample): Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same)
+  (act3): Sigmoid()
+))
+('generalExtractor.net.0.casual', Sequential(
+  (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(1,))
+  (1): Chomp1d()
+  (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (3): ReLU()
+  (4): SpatialDropout()
+  (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(1,))
+  (6): Chomp1d()
+  (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (8): ReLU()
+  (9): SpatialDropout()
+))
+('generalExtractor.net.0.casual.0', Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(1,)))
+('generalExtractor.net.0.casual.1', Chomp1d())
+('generalExtractor.net.0.casual.2', BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('generalExtractor.net.0.casual.3', ReLU())
+('generalExtractor.net.0.casual.4', SpatialDropout())
+('generalExtractor.net.0.casual.5', Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(1,)))
+('generalExtractor.net.0.casual.6', Chomp1d())
+('generalExtractor.net.0.casual.7', BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('generalExtractor.net.0.casual.8', ReLU())
+('generalExtractor.net.0.casual.9', SpatialDropout())
+('generalExtractor.net.0.resample', Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same))
+('generalExtractor.net.0.act3', Sigmoid())
+('generalExtractor.net.1', Temporal_Aware_Block(
+  (casual): Sequential(
+    (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(2,), dilation=(2,))
+    (1): Chomp1d()
+    (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): ReLU()
+    (4): SpatialDropout()
+    (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(2,), dilation=(2,))
+    (6): Chomp1d()
+    (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (8): ReLU()
+    (9): SpatialDropout()
+  )
+  (resample): Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same)
+  (act3): Sigmoid()
+))
+('generalExtractor.net.1.casual', Sequential(
+  (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(2,), dilation=(2,))
+  (1): Chomp1d()
+  (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (3): ReLU()
+  (4): SpatialDropout()
+  (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(2,), dilation=(2,))
+  (6): Chomp1d()
+  (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (8): ReLU()
+  (9): SpatialDropout()
+))
+('generalExtractor.net.1.casual.0', Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(2,), dilation=(2,)))
+('generalExtractor.net.1.casual.1', Chomp1d())
+('generalExtractor.net.1.casual.2', BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('generalExtractor.net.1.casual.3', ReLU())
+('generalExtractor.net.1.casual.4', SpatialDropout())
+('generalExtractor.net.1.casual.5', Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(2,), dilation=(2,)))
+('generalExtractor.net.1.casual.6', Chomp1d())
+('generalExtractor.net.1.casual.7', BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('generalExtractor.net.1.casual.8', ReLU())
+('generalExtractor.net.1.casual.9', SpatialDropout())
+('generalExtractor.net.1.resample', Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same))
+('generalExtractor.net.1.act3', Sigmoid())
+('generalExtractor.net.2', Temporal_Aware_Block(
+  (casual): Sequential(
+    (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(4,), dilation=(4,))
+    (1): Chomp1d()
+    (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): ReLU()
+    (4): SpatialDropout()
+    (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(4,), dilation=(4,))
+    (6): Chomp1d()
+    (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (8): ReLU()
+    (9): SpatialDropout()
+  )
+  (resample): Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same)
+  (act3): Sigmoid()
+))
+('generalExtractor.net.2.casual', Sequential(
+  (0): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(4,), dilation=(4,))
+  (1): Chomp1d()
+  (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (3): ReLU()
+  (4): SpatialDropout()
+  (5): Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(4,), dilation=(4,))
+  (6): Chomp1d()
+  (7): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (8): ReLU()
+  (9): SpatialDropout()
+))
+('generalExtractor.net.2.casual.0', Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(4,), dilation=(4,)))
+('generalExtractor.net.2.casual.1', Chomp1d())
+('generalExtractor.net.2.casual.2', BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('generalExtractor.net.2.casual.3', ReLU())
+('generalExtractor.net.2.casual.4', SpatialDropout())
+('generalExtractor.net.2.casual.5', Conv1d(128, 128, kernel_size=(2,), stride=(1,), padding=(4,), dilation=(4,)))
+('generalExtractor.net.2.casual.6', Chomp1d())
+('generalExtractor.net.2.casual.7', BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('generalExtractor.net.2.casual.8', ReLU())
+('generalExtractor.net.2.casual.9', SpatialDropout())
+('generalExtractor.net.2.resample', Conv1d(128, 128, kernel_size=(1,), stride=(1,), padding=same))
+('generalExtractor.net.2.act3', Sigmoid())
+('generalExtractor.attn', TAB_Attention_MH(
+  (in_proj): Sequential(
+    (0): Rearrange('N C L -> N L C')
+  )
+  (attn): MultiHeadAttention(
+    (Wq): Linear(in_features=128, out_features=128, bias=False)
+    (Wk): Linear(in_features=128, out_features=128, bias=False)
+    (Wv): Linear(in_features=128, out_features=128, bias=False)
+    (fc): Linear(in_features=128, out_features=128, bias=False)
+    (attention): DotScore(
+      (softmax): Softmax(dim=-1)
+    )
+    (layer): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+  )
+  (out_proj): Sequential(
+    (0): Rearrange('N L C -> N C L')
+  )
+))
+('generalExtractor.attn.in_proj', Sequential(
+  (0): Rearrange('N C L -> N L C')
+))
+('generalExtractor.attn.in_proj.0', Rearrange('N C L -> N L C'))
+('generalExtractor.attn.attn', MultiHeadAttention(
+  (Wq): Linear(in_features=128, out_features=128, bias=False)
+  (Wk): Linear(in_features=128, out_features=128, bias=False)
+  (Wv): Linear(in_features=128, out_features=128, bias=False)
+  (fc): Linear(in_features=128, out_features=128, bias=False)
+  (attention): DotScore(
+    (softmax): Softmax(dim=-1)
+  )
+  (layer): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+))
+('generalExtractor.attn.attn.Wq', Linear(in_features=128, out_features=128, bias=False))
+('generalExtractor.attn.attn.Wk', Linear(in_features=128, out_features=128, bias=False))
+('generalExtractor.attn.attn.Wv', Linear(in_features=128, out_features=128, bias=False))
+('generalExtractor.attn.attn.fc', Linear(in_features=128, out_features=128, bias=False))
+('generalExtractor.attn.attn.attention', DotScore(
+  (softmax): Softmax(dim=-1)
+))
+('generalExtractor.attn.attn.attention.softmax', Softmax(dim=-1))
+('generalExtractor.attn.attn.layer', LayerNorm((128,), eps=1e-05, elementwise_affine=True))
+('generalExtractor.attn.out_proj', Sequential(
+  (0): Rearrange('N L C -> N C L')
+))
+('generalExtractor.attn.out_proj.0', Rearrange('N L C -> N C L'))
+('generalExtractor.out_proj1', Sequential(
+  (0): Conv1d(128, 39, kernel_size=(1,), stride=(1,))
+  (1): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+))
+('generalExtractor.out_proj1.0', Conv1d(128, 39, kernel_size=(1,), stride=(1,)))
+('generalExtractor.out_proj1.1', BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('generalExtractor.out_proj2', Sequential(
+  (0): Conv2d(128, 39, kernel_size=(1, 1), stride=(1, 1))
+  (1): BatchNorm2d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+))
+('generalExtractor.out_proj2.0', Conv2d(128, 39, kernel_size=(1, 1), stride=(1, 1)))
+('generalExtractor.out_proj2.1', BatchNorm2d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('specialExtractor', TAB_DIFF(
+  (net): ModuleList(
+    (0): Temporal_Aware_Block(
+      (casual): Sequential(
+        (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(8,), dilation=(8,))
+        (1): Chomp1d()
+        (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (3): ReLU()
+        (4): SpatialDropout()
+        (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(8,), dilation=(8,))
+        (6): Chomp1d()
+        (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (8): ReLU()
+        (9): SpatialDropout()
+      )
+      (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+      (act3): Sigmoid()
+    )
+    (1): Temporal_Aware_Block(
+      (casual): Sequential(
+        (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(16,), dilation=(16,))
+        (1): Chomp1d()
+        (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (3): ReLU()
+        (4): SpatialDropout()
+        (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(16,), dilation=(16,))
+        (6): Chomp1d()
+        (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (8): ReLU()
+        (9): SpatialDropout()
+      )
+      (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+      (act3): Sigmoid()
+    )
+    (2): Temporal_Aware_Block(
+      (casual): Sequential(
+        (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(32,), dilation=(32,))
+        (1): Chomp1d()
+        (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (3): ReLU()
+        (4): SpatialDropout()
+        (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(32,), dilation=(32,))
+        (6): Chomp1d()
+        (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (8): ReLU()
+        (9): SpatialDropout()
+      )
+      (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+      (act3): Sigmoid()
+    )
+    (3): Temporal_Aware_Block(
+      (casual): Sequential(
+        (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(64,), dilation=(64,))
+        (1): Chomp1d()
+        (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (3): ReLU()
+        (4): SpatialDropout()
+        (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(64,), dilation=(64,))
+        (6): Chomp1d()
+        (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (8): ReLU()
+        (9): SpatialDropout()
+      )
+      (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+      (act3): Sigmoid()
+    )
+    (4): Temporal_Aware_Block(
+      (casual): Sequential(
+        (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(128,), dilation=(128,))
+        (1): Chomp1d()
+        (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (3): ReLU()
+        (4): SpatialDropout()
+        (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(128,), dilation=(128,))
+        (6): Chomp1d()
+        (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (8): ReLU()
+        (9): SpatialDropout()
+      )
+      (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+      (act3): Sigmoid()
+    )
+  )
+))
+('specialExtractor.net', ModuleList(
+  (0): Temporal_Aware_Block(
+    (casual): Sequential(
+      (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(8,), dilation=(8,))
+      (1): Chomp1d()
+      (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (3): ReLU()
+      (4): SpatialDropout()
+      (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(8,), dilation=(8,))
+      (6): Chomp1d()
+      (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (8): ReLU()
+      (9): SpatialDropout()
+    )
+    (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+    (act3): Sigmoid()
+  )
+  (1): Temporal_Aware_Block(
+    (casual): Sequential(
+      (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(16,), dilation=(16,))
+      (1): Chomp1d()
+      (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (3): ReLU()
+      (4): SpatialDropout()
+      (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(16,), dilation=(16,))
+      (6): Chomp1d()
+      (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (8): ReLU()
+      (9): SpatialDropout()
+    )
+    (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+    (act3): Sigmoid()
+  )
+  (2): Temporal_Aware_Block(
+    (casual): Sequential(
+      (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(32,), dilation=(32,))
+      (1): Chomp1d()
+      (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (3): ReLU()
+      (4): SpatialDropout()
+      (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(32,), dilation=(32,))
+      (6): Chomp1d()
+      (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (8): ReLU()
+      (9): SpatialDropout()
+    )
+    (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+    (act3): Sigmoid()
+  )
+  (3): Temporal_Aware_Block(
+    (casual): Sequential(
+      (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(64,), dilation=(64,))
+      (1): Chomp1d()
+      (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (3): ReLU()
+      (4): SpatialDropout()
+      (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(64,), dilation=(64,))
+      (6): Chomp1d()
+      (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (8): ReLU()
+      (9): SpatialDropout()
+    )
+    (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+    (act3): Sigmoid()
+  )
+  (4): Temporal_Aware_Block(
+    (casual): Sequential(
+      (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(128,), dilation=(128,))
+      (1): Chomp1d()
+      (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (3): ReLU()
+      (4): SpatialDropout()
+      (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(128,), dilation=(128,))
+      (6): Chomp1d()
+      (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (8): ReLU()
+      (9): SpatialDropout()
+    )
+    (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+    (act3): Sigmoid()
+  )
+))
+('specialExtractor.net.0', Temporal_Aware_Block(
+  (casual): Sequential(
+    (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(8,), dilation=(8,))
+    (1): Chomp1d()
+    (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): ReLU()
+    (4): SpatialDropout()
+    (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(8,), dilation=(8,))
+    (6): Chomp1d()
+    (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (8): ReLU()
+    (9): SpatialDropout()
+  )
+  (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+  (act3): Sigmoid()
+))
+('specialExtractor.net.0.casual', Sequential(
+  (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(8,), dilation=(8,))
+  (1): Chomp1d()
+  (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (3): ReLU()
+  (4): SpatialDropout()
+  (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(8,), dilation=(8,))
+  (6): Chomp1d()
+  (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (8): ReLU()
+  (9): SpatialDropout()
+))
+('specialExtractor.net.0.casual.0', Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(8,), dilation=(8,)))
+('specialExtractor.net.0.casual.1', Chomp1d())
+('specialExtractor.net.0.casual.2', BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('specialExtractor.net.0.casual.3', ReLU())
+('specialExtractor.net.0.casual.4', SpatialDropout())
+('specialExtractor.net.0.casual.5', Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(8,), dilation=(8,)))
+('specialExtractor.net.0.casual.6', Chomp1d())
+('specialExtractor.net.0.casual.7', BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('specialExtractor.net.0.casual.8', ReLU())
+('specialExtractor.net.0.casual.9', SpatialDropout())
+('specialExtractor.net.0.resample', Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same))
+('specialExtractor.net.0.act3', Sigmoid())
+('specialExtractor.net.1', Temporal_Aware_Block(
+  (casual): Sequential(
+    (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(16,), dilation=(16,))
+    (1): Chomp1d()
+    (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): ReLU()
+    (4): SpatialDropout()
+    (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(16,), dilation=(16,))
+    (6): Chomp1d()
+    (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (8): ReLU()
+    (9): SpatialDropout()
+  )
+  (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+  (act3): Sigmoid()
+))
+('specialExtractor.net.1.casual', Sequential(
+  (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(16,), dilation=(16,))
+  (1): Chomp1d()
+  (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (3): ReLU()
+  (4): SpatialDropout()
+  (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(16,), dilation=(16,))
+  (6): Chomp1d()
+  (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (8): ReLU()
+  (9): SpatialDropout()
+))
+('specialExtractor.net.1.casual.0', Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(16,), dilation=(16,)))
+('specialExtractor.net.1.casual.1', Chomp1d())
+('specialExtractor.net.1.casual.2', BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('specialExtractor.net.1.casual.3', ReLU())
+('specialExtractor.net.1.casual.4', SpatialDropout())
+('specialExtractor.net.1.casual.5', Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(16,), dilation=(16,)))
+('specialExtractor.net.1.casual.6', Chomp1d())
+('specialExtractor.net.1.casual.7', BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('specialExtractor.net.1.casual.8', ReLU())
+('specialExtractor.net.1.casual.9', SpatialDropout())
+('specialExtractor.net.1.resample', Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same))
+('specialExtractor.net.1.act3', Sigmoid())
+('specialExtractor.net.2', Temporal_Aware_Block(
+  (casual): Sequential(
+    (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(32,), dilation=(32,))
+    (1): Chomp1d()
+    (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): ReLU()
+    (4): SpatialDropout()
+    (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(32,), dilation=(32,))
+    (6): Chomp1d()
+    (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (8): ReLU()
+    (9): SpatialDropout()
+  )
+  (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+  (act3): Sigmoid()
+))
+('specialExtractor.net.2.casual', Sequential(
+  (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(32,), dilation=(32,))
+  (1): Chomp1d()
+  (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (3): ReLU()
+  (4): SpatialDropout()
+  (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(32,), dilation=(32,))
+  (6): Chomp1d()
+  (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (8): ReLU()
+  (9): SpatialDropout()
+))
+('specialExtractor.net.2.casual.0', Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(32,), dilation=(32,)))
+('specialExtractor.net.2.casual.1', Chomp1d())
+('specialExtractor.net.2.casual.2', BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('specialExtractor.net.2.casual.3', ReLU())
+('specialExtractor.net.2.casual.4', SpatialDropout())
+('specialExtractor.net.2.casual.5', Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(32,), dilation=(32,)))
+('specialExtractor.net.2.casual.6', Chomp1d())
+('specialExtractor.net.2.casual.7', BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('specialExtractor.net.2.casual.8', ReLU())
+('specialExtractor.net.2.casual.9', SpatialDropout())
+('specialExtractor.net.2.resample', Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same))
+('specialExtractor.net.2.act3', Sigmoid())
+('specialExtractor.net.3', Temporal_Aware_Block(
+  (casual): Sequential(
+    (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(64,), dilation=(64,))
+    (1): Chomp1d()
+    (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): ReLU()
+    (4): SpatialDropout()
+    (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(64,), dilation=(64,))
+    (6): Chomp1d()
+    (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (8): ReLU()
+    (9): SpatialDropout()
+  )
+  (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+  (act3): Sigmoid()
+))
+('specialExtractor.net.3.casual', Sequential(
+  (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(64,), dilation=(64,))
+  (1): Chomp1d()
+  (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (3): ReLU()
+  (4): SpatialDropout()
+  (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(64,), dilation=(64,))
+  (6): Chomp1d()
+  (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (8): ReLU()
+  (9): SpatialDropout()
+))
+('specialExtractor.net.3.casual.0', Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(64,), dilation=(64,)))
+('specialExtractor.net.3.casual.1', Chomp1d())
+('specialExtractor.net.3.casual.2', BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('specialExtractor.net.3.casual.3', ReLU())
+('specialExtractor.net.3.casual.4', SpatialDropout())
+('specialExtractor.net.3.casual.5', Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(64,), dilation=(64,)))
+('specialExtractor.net.3.casual.6', Chomp1d())
+('specialExtractor.net.3.casual.7', BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('specialExtractor.net.3.casual.8', ReLU())
+('specialExtractor.net.3.casual.9', SpatialDropout())
+('specialExtractor.net.3.resample', Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same))
+('specialExtractor.net.3.act3', Sigmoid())
+('specialExtractor.net.4', Temporal_Aware_Block(
+  (casual): Sequential(
+    (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(128,), dilation=(128,))
+    (1): Chomp1d()
+    (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): ReLU()
+    (4): SpatialDropout()
+    (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(128,), dilation=(128,))
+    (6): Chomp1d()
+    (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (8): ReLU()
+    (9): SpatialDropout()
+  )
+  (resample): Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same)
+  (act3): Sigmoid()
+))
+('specialExtractor.net.4.casual', Sequential(
+  (0): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(128,), dilation=(128,))
+  (1): Chomp1d()
+  (2): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (3): ReLU()
+  (4): SpatialDropout()
+  (5): Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(128,), dilation=(128,))
+  (6): Chomp1d()
+  (7): BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (8): ReLU()
+  (9): SpatialDropout()
+))
+('specialExtractor.net.4.casual.0', Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(128,), dilation=(128,)))
+('specialExtractor.net.4.casual.1', Chomp1d())
+('specialExtractor.net.4.casual.2', BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('specialExtractor.net.4.casual.3', ReLU())
+('specialExtractor.net.4.casual.4', SpatialDropout())
+('specialExtractor.net.4.casual.5', Conv1d(39, 39, kernel_size=(2,), stride=(1,), padding=(128,), dilation=(128,)))
+('specialExtractor.net.4.casual.6', Chomp1d())
+('specialExtractor.net.4.casual.7', BatchNorm1d(39, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True))
+('specialExtractor.net.4.casual.8', ReLU())
+('specialExtractor.net.4.casual.9', SpatialDropout())
+('specialExtractor.net.4.resample', Conv1d(39, 39, kernel_size=(1,), stride=(1,), padding=same))
+('specialExtractor.net.4.act3', Sigmoid())
+('merge', Sequential(
+  (0): Linear(in_features=8, out_features=1, bias=True)
+))
+('merge.0', Linear(in_features=8, out_features=1, bias=True))
+('classifier', Sequential(
+  (0): Rearrange('N C L H -> N C (L H)')
+  (1): AdaptiveAvgPool1d(output_size=1)
+  (2): Rearrange('N C L -> N (C L)')
+  (3): Linear(in_features=39, out_features=2, bias=True)
+))
+('classifier.0', Rearrange('N C L H -> N C (L H)'))
+('classifier.1', AdaptiveAvgPool1d(output_size=1))
+('classifier.2', Rearrange('N C L -> N (C L)'))
+('classifier.3', Linear(in_features=39, out_features=2, bias=True))

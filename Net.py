@@ -18,7 +18,10 @@ from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, pl
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-class Net_Instance:
+class Net_Agent:
+    """
+    训练智能体
+    """
     def __init__(self, args: Args):
         self.args: Args = args
         self.optimizer_type = args.optimizer_type

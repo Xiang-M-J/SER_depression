@@ -1,9 +1,7 @@
-import math
 from itertools import repeat
 
 import torch
 import torch.nn as nn
-from torch.nn.utils import weight_norm
 
 from config import Args
 
@@ -97,40 +95,6 @@ class Temporal_Aware_Block(nn.Module):
         return x
 
 
-class Temporal_Aware_Block_simple(nn.Module):
-    def __init__(self, feature_dim, filters, dilation, kernel_size, dropout=0.):
-        super(Temporal_Aware_Block_simple, self).__init__()
-        padding = (kernel_size - 1) * dilation
-        self.conv1 = nn.Sequential(
-            weight_norm(
-                nn.Conv1d(in_channels=feature_dim, out_channels=filters, kernel_size=1, padding=0, dilation=dilation)),
-            nn.BatchNorm1d(filters),
-            nn.ReLU(),
-            SpatialDropout(dropout)
-        )
-        self.conv2 = nn.Sequential(
-            weight_norm(nn.Conv1d(in_channels=filters, out_channels=filters,
-                                  kernel_size=kernel_size, padding=padding, dilation=dilation)),
-            Chomp1d(padding),
-            nn.BatchNorm1d(filters),
-            nn.ReLU(),
-            # nn.Dropout(dropout)
-            SpatialDropout(dropout)
-        )
-        self.resample = nn.Conv1d(in_channels=feature_dim, out_channels=filters, kernel_size=1, padding="same")
-        self.act = nn.Sigmoid()
-
-    def forward(self, x):  # input_shape: [batch_size, feature_dim, seq_len]
-        identity_x = x
-        x = self.conv1(x)
-        x = self.conv2(x)
-        if identity_x.shape[1] != x.shape[1]:
-            identity_x = self.resample(identity_x)
-        x = self.act(x)
-        x = torch.add(x, identity_x)  # 因为这里是乘法，所以需要先经过Sigmoid，防止x后面全部变零
-        return x
-
-
 class Temporal_Aware_Block_inception(nn.Module):  # 会比原始版本慢1/2
     def __init__(self, feature_dim, filters, dilation, kernel_size, dropout=0.):
         super(Temporal_Aware_Block_inception, self).__init__()
@@ -187,54 +151,6 @@ class Temporal_Aware_Block_inception(nn.Module):  # 会比原始版本慢1/2
         return x
 
 
-class Temporal_Aware_Block_inception_v2(nn.Module):  # 会比原始版本慢1/2
-    def __init__(self, feature_dim, filters, dilation, kernel_size, dropout=0.):
-        super(Temporal_Aware_Block_inception_v2, self).__init__()
-
-        conv1_size = math.floor(filters / 2)
-        conv2_size = filters - conv1_size
-        padding = (kernel_size - 1) * dilation
-        self.conv1 = nn.Sequential(  # kernel_size = [2, 2]
-            nn.Conv1d(in_channels=feature_dim, out_channels=conv1_size, kernel_size=kernel_size, dilation=dilation,
-                      padding=padding),
-            Chomp1d(padding),
-            nn.BatchNorm1d(conv1_size),
-            nn.ReLU(),
-            SpatialDropout(dropout),
-            nn.Conv1d(in_channels=conv1_size, out_channels=conv1_size, kernel_size=kernel_size, dilation=dilation,
-                      padding=padding),
-            Chomp1d(padding),
-            nn.BatchNorm1d(conv1_size),
-            nn.ReLU(),
-            SpatialDropout(dropout),
-        )
-        padding = (3 - 1) * dilation
-        self.conv2 = nn.Sequential(  # kernel_size = [1 3]
-            nn.Conv1d(in_channels=feature_dim, out_channels=conv2_size, kernel_size=1, dilation=dilation, padding=0),
-            nn.BatchNorm1d(conv2_size),
-            nn.ReLU(),
-            SpatialDropout(dropout),
-            nn.Conv1d(in_channels=conv2_size, out_channels=conv2_size, kernel_size=3, dilation=dilation,
-                      padding=padding),
-            Chomp1d(padding),
-            nn.BatchNorm1d(conv2_size),
-            nn.ReLU(),
-            SpatialDropout(dropout),
-        )
-        self.resample = nn.Conv1d(in_channels=feature_dim, out_channels=filters, kernel_size=1, padding="same")
-        self.act = nn.Sigmoid()
-
-    def forward(self, x):
-        x1 = self.conv1(x)
-        x2 = self.conv2(x)
-        out = torch.cat([x1, x2], dim=1)
-        if x.shape[1] != out.shape[1]:
-            x = self.resample(x)
-        out = self.act(out)
-        x = torch.mul(out, x)
-        return x
-
-
 class Temporal_Aware_Block_design(nn.Module):  # 使用优化过的TAB，效果一般，可以较为明显地减小波动幅度
     def __init__(self, feature_dim, filters, dilation, kernel_size, dropout=0.):
         super(Temporal_Aware_Block_design, self).__init__()
@@ -263,9 +179,6 @@ class Temporal_Aware_Block_design(nn.Module):  # 使用优化过的TAB，效果�
         self.casual = nn.Sequential(
             conv1, bn1, act1, dropout1, conv2, chomp2, bn2, act2, dropout2, conv3, bn3, act3, dropout3,
         ).to(device)
-        # self.casual = nn.Sequential(
-        #     conv1, chomp1, bn1, act1, conv2, chomp2, bn2, act2,
-        # ).to(device)
         self.resample = nn.Conv1d(in_channels=feature_dim, out_channels=filters, kernel_size=1, padding="same")
         self.act3 = nn.Sigmoid()
 
@@ -328,44 +241,19 @@ class CausalConv(nn.Module):  # Conv1d Input:[batch_size, feature_dim, seq_len]
         skip_out_f = x_f
         skip_out_b = x_b
 
-        if self.is_weight:  # v1 添加weight layer
-            for layer in self.dilation_layer:
-                skip_out_f = layer(skip_out_f)
-                skip_out_b = layer(skip_out_b)
-                skip_temp = torch.add(skip_out_f, skip_out_b)
-                skip_temp = skip_temp.unsqueeze(-1)
-                if skip_stack is None:
-                    skip_stack = skip_temp
-                else:
-                    skip_stack = torch.cat((skip_stack, skip_temp), dim=-1)
-            # skip_stack = self.drop(skip_stack)
-            skip_stack = self.weight(skip_stack)
-            skip_stack = skip_stack.squeeze(-1)
-        else:  # v2 不加weight layer
-            for layer in self.dilation_layer:
-                skip_out_f = layer(skip_out_f)
-                skip_out_b = layer(skip_out_b)
-            skip_stack = torch.add(skip_out_f, skip_out_b)
+        for layer in self.dilation_layer:
+            skip_out_f = layer(skip_out_f)
+            skip_out_b = layer(skip_out_b)
+            skip_temp = torch.add(skip_out_f, skip_out_b)
+            skip_temp = skip_temp.unsqueeze(-1)
+            if skip_stack is None:
+                skip_stack = skip_temp
+            else:
+                skip_stack = torch.cat((skip_stack, skip_temp), dim=-1)
+        skip_stack = self.weight(skip_stack)
+        skip_stack = skip_stack.squeeze(-1)
         return skip_stack  # output shape: [batch_size, feature_dim, seq_len]
 
 
 if __name__ == "__main__":
-
-    model1 = Temporal_Aware_Block_simple(39, 39, 4, 2, 0.1)
-    model2 = Temporal_Aware_Block(39, 39, 4, 2, 0.1)
-    import time
-
-    x = torch.randn([4, 39, 313])
-    a = time.time()
-    for i in range(1000):
-        y = model2(x)
-    b = time.time()
-    print(f"model2: {b - a}")
-
-    a = time.time()
-    for i in range(1000):
-        y = model1(x)
-    b = time.time()
-    print(f"model1: {b - a}")
-
-    # print(y.shape)
+    pass
