@@ -149,7 +149,7 @@ class AFTSimpleAttention(nn.Module):
             q: [batch_size, seq_len, d_model]
             k: [batch_size, seq_len, d_model]
             v: [batch_size, seq_len, d_model]
-            mask:
+            attn_mask:
         Returns:
         """
         _, seq_len, _ = q.shape
