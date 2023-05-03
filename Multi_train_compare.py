@@ -1,18 +1,20 @@
 import math
 import os
-import torch.nn as nn
+
 import numpy as np
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim
+from einops.layers.torch import Rearrange
 from matplotlib import pyplot as plt
 from torch.autograd import Function
-import torch.optim
-from torch.cuda.amp import autocast, GradScaler
-from model import AT_TAB, TAB_DIFF
-from einops.layers.torch import Rearrange
-import torch.nn.functional as F
-from config import Args
-from multiModel import MModel, mmd, Discriminator
-from utils import get_newest_file, load_loader, NoamScheduler, Metric, EarlyStopping, accuracy_cal
+from torch.cuda.amp import GradScaler
 
+from config import Args
+from model import AT_TAB, TAB_DIFF
+from utils import get_newest_file, load_loader, NoamScheduler, Metric, accuracy_cal
+
+# 联合训练
 dataset_name = ['MODMA', 'CASIA']
 num_class = [2, 6]
 seq_len = [313, 188]
