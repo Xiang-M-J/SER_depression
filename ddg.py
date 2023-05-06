@@ -14,10 +14,10 @@ from multiModel import MModel, mmd
 from blocks import Chomp1d
 from utils import get_newest_file, load_loader, NoamScheduler, Metric, EarlyStopping, accuracy_cal
 
-dataset_name = ['MODMA', 'CASIA']
-num_class = [2, 6]
+dataset_name = ['MODMA', 'CASIA2']
+num_class = [2, 2]
 seq_len = [313, 188]
-num_sample = [3549, 7200]
+num_sample = [3549, 2400]
 split_rate = [0.6, 0.2, 0.2]
 dataset_num = len(dataset_name)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -104,7 +104,7 @@ class DDGTrainer:
         args.num_class = num_class
         self.optimizer_type = args.optimizer_type
         self.epochs = args.epochs
-        self.inner_iter = 20
+        self.inner_iter = 23
         self.mmd_step = 6
         self.feature_dim = args.feature_dim
         self.batch_size = args.batch_size
@@ -315,25 +315,24 @@ class DDGTrainer:
         hidden1 = Hidden(arg).to(device)
         hidden2 = Hidden(arg).to(device)
         parameter = [
-            {'params': model.prepare.parameters(), 'lr': arg.lr},
-            {'params': model.shareNet.parameters(), 'lr': arg.lr},
+            {'params': model.prepare.parameters(), 'lr': 0.2 * arg.lr},
+            {'params': model.shareNet.parameters(), 'lr': 0.2 * arg.lr},
             {'params': hidden1.parameters(), 'lr': arg.lr},
             {'params': hidden2.parameters(), 'lr': arg.lr},
-
         ]
-        share_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
-        share_scheduler = torch.optim.lr_scheduler.StepLR(share_optimizer, step_size=40, gamma=0.3)
+        share_optimizer = torch.optim.SGD(parameter, lr=arg.lr)
+        share_scheduler = torch.optim.lr_scheduler.StepLR(share_optimizer, step_size=30, gamma=0.3)
         discriminator = Discriminator(arg).to(device)
         discriminator.train()
         parameter = [
-            {'params': model.prepare.parameters(), 'lr': arg.lr},
-            {'params': model.shareNet.parameters(), 'lr': arg.lr},
+            {'params': model.prepare.parameters(), 'lr': 0.2 * arg.lr},
+            {'params': model.shareNet.parameters(), 'lr': 0.2 * arg.lr},
             {'params': hidden1.parameters(), 'lr': arg.lr},
             {"params": hidden2.parameters(), 'lr': arg.lr},
             {"params": discriminator.parameters(), 'lr': arg.lr}
         ]
-        disc_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
-        disc_scheduler = torch.optim.lr_scheduler.StepLR(disc_optimizer, step_size=40, gamma=0.3)
+        disc_optimizer = torch.optim.SGD(parameter, lr=arg.lr)
+        disc_scheduler = torch.optim.lr_scheduler.StepLR(disc_optimizer, step_size=30, gamma=0.3)
 
         best_val_accuracy = 0
         metric = Metric()
@@ -352,7 +351,7 @@ class DDGTrainer:
                 train_acc += correct_num.cpu().numpy()
                 train_loss += loss.data.item()
 
-            if (epoch + 1) % self.mmd_step == 0 and epoch < 61:
+            if (epoch + 1) % self.mmd_step == 0 and (0 < epoch < 101):
                 m_loss = []
                 for step in range(self.inner_iter):
                     train_batch = []
@@ -484,6 +483,7 @@ class DDGTrainer:
 
 if __name__ == "__main__":
     arg = Args()
+    arg.random_seed = 34
     trainer = DDGTrainer(arg)
     trainer.train()
     trainer.test()

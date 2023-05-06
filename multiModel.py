@@ -117,12 +117,28 @@ class MModel(nn.Module):
         _, x_f, _ = self.shareNet(x_f, x_b)
         return x_f
 
+    def get_stackFeature(self, x):
+        x_f = self.prepare(x)
+        x_b = self.prepare(torch.flip(x, dims=[-1]))
+        stack, _, _ = self.shareNet(x_f, x_b)
+        return stack
+
     def get_mmd_feature(self, x):
         x_f = self.prepare(x)
         x_b = self.prepare(torch.flip(x, dims=[-1]))
         _, x_f, _ = self.shareNet(x_f, x_b)
         _, x_f = self.specialNet[0](x_f)
         return x_f
+
+    def get_softmax(self, x):
+        x_f = self.prepare(x)
+        x_b = self.prepare(torch.flip(x, dims=[-1]))
+        x_1, x_f, _ = self.shareNet(x_f, x_b)
+        x_2, x_f = self.specialNet[0](x_f)
+        x = self.specialNet[1](torch.cat([x_1, x_2], dim=-1))
+        x = self.specialNet[2](x)
+        x = F.softmax(x, dim=1)
+        return x
 
     def forward(self, x, y):
         x_f = self.prepare(x)
