@@ -569,11 +569,11 @@ class MTCN(nn.Module):
         self.name = "MTCN"
         if num_layers is None:
             num_layers = [3, 5]
-        self.prepare = nn.Sequential(
-            nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1, padding=0),
-            nn.BatchNorm1d(args.filters),
-            nn.ReLU(),
-        )
+        # self.prepare = nn.Sequential(
+        #     nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1, padding=0),
+        #     nn.BatchNorm1d(args.filters),
+        #     nn.ReLU(),
+        # )
         self.generalExtractor = AT_TAB(args, num_layer=num_layers, index=0)
         self.specialExtractor = TAB_DIFF(args, num_layer=num_layers, index=1)
         args.dilation = num_layers[0] + num_layers[1]
@@ -626,8 +626,10 @@ class MTCN(nn.Module):
         # x_2, x = self.specialExtractor(x)
 
         # for AT_DIFF
-        x_f = self.prepare(x)
-        x_b = self.prepare(torch.flip(x, dims=[-1]))
+        # x_f = self.prepare(x)
+        # x_b = self.prepare(torch.flip(x, dims=[-1]))
+        x_f = x
+        x_b = torch.flip(x, dims=[-1])
         x_1, x, _ = self.generalExtractor(x_f, x_b, mask)
         x_2, x = self.specialExtractor(x)
 

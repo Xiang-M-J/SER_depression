@@ -1,4 +1,6 @@
-from Net import Net_Agent
+import numpy as np
+
+from Net import Agent
 
 from config import Args
 from utils import load_dataset, get_newest_file
@@ -28,9 +30,11 @@ if __name__ == "__main__":
         train_dataset, val_dataset, test_dataset = load_dataset(
             dataset_name, spilt_rate, args.random_seed, order=args.order, version="V1", is_cluster=args.is_cluster)
         args.seq_len = train_dataset[0][0].shape[-1]
-        agent = Net_Agent(args)
-        agent.train(train_dataset, val_dataset)
+        agent = Agent(args)
+        agent.train(train_dataset, val_dataset, test_dataset)
         agent.test(test_dataset, model_path=None)
+        print(agent.test_acc)
+        print(np.mean(agent.test_acc))
         # agent.multi_test(test_dataset)
     else:
         print("请修改模型名后再次执行")

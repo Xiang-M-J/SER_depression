@@ -18,7 +18,7 @@ from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, pl
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-class Net_Agent:
+class Agent:
     """
     训练智能体
     """
@@ -33,6 +33,7 @@ class Net_Agent:
         self.batch_size = args.batch_size
         self.epochs = args.epochs
         self.lr = args.lr
+        self.test_acc = []
         check_dir()
         if args.save:
             self.logger = logger(self.args.model_name, self.args.addition())
@@ -66,7 +67,7 @@ class Net_Agent:
         else:
             raise NotImplementedError
 
-    def train(self, train_dataset, val_dataset):
+    def train(self, train_dataset, val_dataset, test_dataset):
         if self.model_type == "TIM":
             model = TIM(self.args)
         elif self.model_type == "SET":
@@ -266,6 +267,9 @@ class Net_Agent:
                 print(f"val_accuracy did not improve from {best_val_accuracy}")
             if early_stop(metric.val_acc[-1]):
                 break
+            if metric.val_acc[-1] > 99.4:
+                self.test_acc.append(self.multi_test_step(model, test_dataset=test_dataset))
+
             # model_save(model, epoch)
 
         if self.args.save:
@@ -403,3 +407,20 @@ class Net_Agent:
             model_path = self.save_path + f"/{m}"
             metric, _ = self.test_step(model_path, test_loader, loss_fn, test_num, metric)
         print(metric.test_acc)
+
+    def multi_test_step(self, model, test_dataset):
+        test_loader = dataloader.DataLoader(
+            dataset=test_dataset,
+            batch_size=self.batch_size,
+        )
+        test_num = len(test_dataset)
+        test_acc = 0
+        model.eval()
+        with torch.no_grad():
+            for vx, vy in test_loader:
+                vx, vy = vx.to(device), vy.to(device)
+                with torch.no_grad():
+                    output = model(vx)
+                    test_acc += accuracy_cal(output, vy).cpu().numpy()
+        test_acc = test_acc / test_num
+        return test_acc
