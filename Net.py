@@ -153,7 +153,7 @@ class Agent:
             #         parameter.append({"params": param, "lr": lr})
             # optimizer = self.get_optimizer(parameter, lr)
 
-            # 对于MultiTIM
+            # 对于MTCN
             # pretrain_name = ['generalExtractor', 'specialExtractor']
             pretrain_name = ['generalExtractor']  # 只固定 generalExtractor的效果更好一点
             for k, v in pretrain_model_dict:

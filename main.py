@@ -8,7 +8,7 @@ from utils import load_dataset, get_newest_file
 args = Args()
 spilt_rate = [0.6, 0.2, 0.2]  # 训练集、验证集、测试集分割比例
 # seed_everything(args.random_seed)
-model_type = 'MTCN'
+model_type = 'TCN'
 dataset_name = "MODMA"
 args.model_type = model_type
 args.dataset_name = dataset_name
@@ -16,7 +16,7 @@ args.spilt_rate = spilt_rate
 args.num_class = 2
 args.multi_type = "AT_DIFF"
 # args.is_cluster = True
-args.pretrain_model_path = "models/MultiTIM_AT_DIFF_CASIA_order3_drop1_mfcc_epoch100_l2re1_lr0002_pretrainFalse_clusterFalse.pt"
+args.pretrain_model_path = "models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt"
 if __name__ == "__main__":
     print("dataset name: ", args.dataset_name)
     print("model type: ", args.model_type)
