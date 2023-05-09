@@ -44,7 +44,7 @@ class Classifier(nn.Module):
             # nn.BatchNorm1d(100),
             # nn.ReLU(),
             # nn.Dropout(0.1),
-            nn.Linear(100, 4),
+            nn.Linear(100, 2),
         )
 
     def forward(self, x):
@@ -420,12 +420,12 @@ class ADDATrainer:
 
 if __name__ == "__main__":
     arg = Args()
-    src_dataset_name = 'CASIA_'
-    tgt_dataset_name = "RAVDESS_"
+    src_dataset_name = 'DAIC21'
+    tgt_dataset_name = "MODMA"
     # CASIA_和RAVDESS_四分类只有50%的准确率
     trainer = ADDATrainer(arg, src_dataset_name, tgt_dataset_name)
-    # trainer.pretrain()
-    # trainer.train()
+    trainer.pretrain()
+    trainer.train()
     # trainer.finetune()
     trainer.test(is_fine_tune=False)
     # trainer.no_train()

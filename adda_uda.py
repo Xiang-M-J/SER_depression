@@ -5,26 +5,17 @@ import torch.nn as nn
 import torch.optim
 from einops.layers.torch import Rearrange
 
-from blocks import MTCNBlock
 from config import Args
-from utils import load_loader, accuracy_cal, Metric, cal_seq_len, l2_regularization
+from model import AT_DIFF_Block
+from utils import load_loader, accuracy_cal, Metric
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 class Encoder(nn.Module):
-    def __init__(self, arg:Args):
+    def __init__(self, arg: Args):
         super(Encoder, self).__init__()
-        self.net = nn.Sequential(
-            nn.Conv1d(in_channels=arg.feature_dim, out_channels=arg.filters, kernel_size=3, padding="same"),
-            nn.BatchNorm1d(arg.filters),
-            nn.Dropout(0.1),
-            nn.ReLU(),
-            nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
-            nn.BatchNorm1d(arg.filters),
-            nn.Dropout(0.1),
-            nn.ReLU(),
-        )
+        self.net = AT_DIFF_Block(arg)
 
     def forward(self, x):
         x = self.net(x)
@@ -35,12 +26,9 @@ class Classifier(nn.Module):
     def __init__(self, arg):
         super(Classifier, self).__init__()
         self.net = nn.Sequential(
+            nn.AdaptiveAvgPool1d(1),
             Rearrange("N C L -> N (C L)"),
-            nn.Linear(arg.seq_len * arg.filters, 100),
-            nn.BatchNorm1d(100),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(100, 4),
+            nn.Linear(arg.filters, 2),
         )
 
     def forward(self, x):
@@ -84,8 +72,8 @@ class ADDATrainer:
         self.lr = arg.lr
         self.weight_decay = arg.weight_decay
         self.batch_size = arg.batch_size
-        self.iteration = 1000
-        self.pretrain_epochs = 50
+        self.iteration = 2000
+        self.pretrain_epochs = 15
         self.pretrain_best_path = f"models/uda/pretrain_DAIC21_best.pt"
         self.pretrain_final_path = f"models/uda/pretrain_DAIC21_final.pt"
         self.tgt_best_path = f"models/uda/tgt_encoder_best.pt"
@@ -119,7 +107,7 @@ class ADDATrainer:
             train_loss /= math.ceil(src_train_num / self.batch_size)
             metric.train_acc.append(train_acc)
             metric.train_loss.append(train_loss)
-            print(f"epoch {epoch + 1}: train_acc: {train_acc}\t train_loss: {train_loss}")
+            print(f"epoch {epoch + 1}: train_acc: {train_acc*100 :.3f}\t train_loss: {train_loss:.4f}")
 
             model.eval()
             val_acc = 0
@@ -134,11 +122,11 @@ class ADDATrainer:
             val_loss /= math.ceil(src_val_num / self.batch_size)
             metric.val_acc.append(val_acc)
             metric.val_loss.append(val_loss)
-            print(f"epoch {epoch + 1}: val_acc: {val_acc}\t val_loss: {val_loss}")
+            print(f"epoch {epoch + 1}: val_acc: {val_acc*100 :.3f}\t val_loss: {val_loss:.4f}")
             # scheduler.step()
 
             if val_acc > best_val_accuracy:
-                print(f"val_accuracy improved from {best_val_accuracy} to {val_acc}")
+                print(f"val_accuracy improved from {best_val_accuracy*100:.3f} to {val_acc*100:.3f}")
                 best_val_accuracy = val_acc
                 metric.best_val_acc = [best_val_accuracy, train_acc]
                 torch.save(model, self.pretrain_best_path)
@@ -148,32 +136,29 @@ class ADDATrainer:
                     metric.best_val_acc[1] = train_acc
                     print("update train accuracy")
             else:
-                print(f"val_accuracy did not improve from {best_val_accuracy}")
-        np.save(f"results/ADDA/pretrain.npy", metric.item())
+                print(f"val_accuracy did not improve from {best_val_accuracy*100:.3f}")
         torch.save(model, self.pretrain_final_path)
 
     def train_step(self, model, optimizer, src_x, src_y):
-        src_x = src_x[:, :, :self.mini_seq_len]
         src_x, src_y = src_x.to(device), src_y.to(device)
         label = model(src_x)
         correct_num = accuracy_cal(label, src_y)
-        loss = self.criterion(label, src_y) + l2_regularization(model, self.arg.weight_decay)
+        loss = self.criterion(label, src_y)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         return correct_num.cpu().numpy(), loss.data.item()
 
     def val_step(self, model, vx, vy):
-        vx = vx[:, :, :self.mini_seq_len]
         vx, vy = vx.to(device), vy.to(device)
         label = model(vx)
         correct_num = accuracy_cal(label, vy)
         loss = self.criterion(label, vy)
         return correct_num.cpu().numpy(), loss.data.item()
 
-    def get_data(self, batch):
+    @staticmethod
+    def get_data(batch):
         x, y = batch
-        x = x[:, :, :self.mini_seq_len]
         x, y = x.to(device), y.to(device)
         return x, y
 
@@ -226,7 +211,7 @@ class ADDATrainer:
             tgt_sample_num += tgt_batch_size
 
             if step % 5 == 0:
-                # 每10步训练一次discriminator
+                # 每5步训练一次discriminator
                 src_label = torch.ones(src_batch_size).long().to(device)
                 tgt_label = torch.zeros(tgt_batch_size).long().to(device)
                 concat_label = torch.cat([src_label, tgt_label], 0)
@@ -267,8 +252,8 @@ class ADDATrainer:
                 tgt_domain_loss /= mini_iter
 
                 print(f"step {step}:")
-                print(f"domain acc(critic): {critic_domain_acc}\t domain acc(tgt): {tgt_domain_acc}")
-                print(f"domain loss(critic): {critic_domain_loss}\t domain loss(tgt): {tgt_domain_loss}")
+                print(f"domain acc(critic): {critic_domain_acc * 100 :.3f}\t domain acc(tgt): {tgt_domain_acc * 100 :.3f}")
+                print(f"domain loss(critic): {critic_domain_loss :.4f}\t domain loss(tgt): {tgt_domain_loss :.4f}")
                 metric.train_acc.append(critic_domain_acc)
                 metric.val_acc.append(tgt_domain_acc)
                 metric.train_loss.append(critic_domain_loss)
@@ -278,14 +263,12 @@ class ADDATrainer:
 
                     torch.save(tgt_encoder, self.tgt_best_path)
                     torch.save(critic, self.critic_best_path)
-                    print(f"tgt domain acc improved from {best_domain_tgt_acc} to {tgt_domain_acc} ")
+                    print(f"tgt domain acc improved from {best_domain_tgt_acc*100 :.3f} to {tgt_domain_acc*100 :.3f} ")
                     best_domain_tgt_acc = tgt_domain_acc
                     metric.best_val_acc[0] = best_domain_tgt_acc
                     metric.best_val_acc[1] = tgt_domain_acc
-                    # self.metric.best_val_acc[0] = best_eval_acc
-                    # self.metric.best_val_acc[1] = tgt_domain_acc
                 else:
-                    print(f"tgt domain acc do not improve from {best_domain_tgt_acc}")
+                    print(f"tgt domain acc do not improve from {best_domain_tgt_acc*100 :.3f}")
 
                 # 记录变量置零
                 critic_domain_acc = 0
@@ -295,7 +278,7 @@ class ADDATrainer:
                 critic_sample_num = 0
                 critic_update_iter = 0
                 tgt_sample_num = 0
-        np.save(f"results/ADDA/train.npy", metric.item())
+        np.save(f"results/data/uda/train.npy", metric.item())
         torch.save(tgt_encoder, self.tgt_final_path)
         torch.save(critic, self.critic_final_path)
 
@@ -319,52 +302,16 @@ class ADDATrainer:
         metric.test_acc = test_acc
         metric.test_loss = test_loss
         print(f"test acc: {test_acc}, test loss: {test_loss}")
-        np.save(f"results/ADDA/test.npy", metric.item())
-
-    def no_train(self):
-        src_encoder = torch.load(self.pretrain_best_path)[0]
-        tgt_classifier = Classifier(self.arg).to(device)
-        model = nn.Sequential(
-            src_encoder,
-            tgt_classifier,
-            nn.Linear(self.arg.num_class[0], self.arg.num_class[1]).to(device)
-        )
-        for name, param in model[0].named_parameters():
-            param.requires_grad = False
-        optimizer_tgt_classifier = torch.optim.Adam(model[1:].parameters(), lr=1e-4)
-        model.train()
-        best_fine_acc = 0
-        metric = Metric()
-        for epoch in range(self.fine_tune_epochs):
-            fine_tune_acc = 0
-            fine_tune_loss = 0
-            for bx, by in self.tgt_train:
-                correct_num, loss_v = self.train_step(model, optimizer_tgt_classifier, bx, by)
-                fine_tune_acc += correct_num
-                fine_tune_loss += loss_v
-            fine_tune_acc /= len(self.tgt_train.dataset)
-            fine_tune_loss /= math.ceil(len(self.tgt_train.dataset) / self.batch_size)
-            metric.train_acc.append(fine_tune_acc)
-            metric.train_loss.append(fine_tune_loss)
-            # # self.metric.val_acc.append(val_acc)
-            # # self.metric.val_loss.append(val_loss)
-            print(f"fine-tune acc: {fine_tune_acc}, fine-tune loss: {fine_tune_loss}")
-            if fine_tune_acc > best_fine_acc:
-                torch.save(model, self.fine_tune_best_path)
-                print(f"fine-tune acc improved from {best_fine_acc} to {fine_tune_acc} ")
-                best_fine_acc = fine_tune_acc
-                self.metric.best_val_acc[0] = fine_tune_acc
-            else:
-                print(f"fine-tune acc do not improve from {best_fine_acc}")
-        torch.save(model, self.fine_tune_final_path)
-        # np.save(f"results/ADDA/fine_tune.npy", metric.item())
+        np.save(f"results/data/uda/test.npy", metric.item())
 
 
 if __name__ == "__main__":
+    # 准确率：0.667
     arg = Args()
     src_dataset_name = 'DAIC21'
     tgt_dataset_name = "MODMA"
     trainer = ADDATrainer(arg, src_dataset_name, tgt_dataset_name)
-
+    # trainer.pretrain()
+    # trainer.test()
+    trainer.train()
     trainer.test()
-
