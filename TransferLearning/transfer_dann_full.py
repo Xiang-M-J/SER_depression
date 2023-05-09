@@ -9,9 +9,10 @@ from torch.cuda.amp import autocast, GradScaler
 from einops.layers.torch import Rearrange
 import torch.nn.functional as F
 from config import Args
-from multiModel import MModel, mmd
-from utils import get_newest_file, load_loader, NoamScheduler, Metric, EarlyStopping, accuracy_cal
+from multiModel import MModel, mmd, SinkhornDistance
+from utils import get_newest_file, load_loader, NoamScheduler, Metric, EarlyStopping, accuracy_cal, EarlyStoppingLoss
 
+# 仿照DANN，将标签分类损失与域分类损失相加
 dataset_name = ['MODMA', 'CASIA']
 num_class = [2, 6]
 seq_len = [313, 188]
@@ -20,6 +21,7 @@ split_rate = [0.6, 0.2, 0.2]
 dataset_num = len(dataset_name)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 use_amp = False
+shDistance = SinkhornDistance(eps=0.001, max_iter=100, reduction="mean")
 if use_amp:
     scaler = GradScaler()
 
@@ -87,7 +89,27 @@ class Hidden(nn.Module):
         x = self.upsample1(x)
         x = self.upsample2(x)
         x = self.upsample3(x)
+        return x
 
+
+class Decoder(nn.Module):
+    def __init__(self, arg: Args):
+        super(Decoder, self).__init__()
+        conv = nn.Sequential(
+            nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(arg.filters),
+            nn.ReLU()
+        )
+        linear = nn.Sequential(
+            nn.Linear(arg.seq_len, arg.seq_len),
+            nn.ReLU()
+        )
+        self.net = nn.Sequential(
+            conv, conv, linear
+        )
+
+    def forward(self, x):
+        x = self.net(x)
         return x
 
 
@@ -95,42 +117,46 @@ class Discriminator(nn.Module):
     def __init__(self, arg):
         super(Discriminator, self).__init__()
         self.net = nn.Sequential(
-            nn.Linear(arg.seq_len, 1024),
+            nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(arg.filters),
             nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(1024, 1),
+            nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(arg.filters),
             nn.ReLU(),
-            nn.Dropout(0.1),
+            nn.Conv1d(in_channels=arg.filters, out_channels=arg.filters, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(arg.filters),
+            nn.ReLU(),
             Rearrange("N C L -> N (C L)"),
-            nn.Linear(arg.filters, 1),
-            nn.Sigmoid()
+            nn.Linear(arg.seq_len * arg.filters, 1000),
+            nn.Dropout(0.3),
+            nn.Linear(1000, 2),
         )
 
     def forward(self, x, y):
         x = self.net(x)
-        loss = F.binary_cross_entropy(x, y)
+        loss = F.cross_entropy(x, y, label_smoothing=0.1)
         correct_num = accuracy_cal(x, y)
         return loss, correct_num
 
 
-class DDGTrainer:
+class DANNTrainer:
     def __init__(self, args: Args):
         args.num_class = num_class
         self.optimizer_type = args.optimizer_type
         self.epochs = args.epochs
         self.inner_iter = 34
-        self.mmd_step = 6
+        self.mmd_step = 3
         self.feature_dim = args.feature_dim
         self.batch_size = args.batch_size
         self.seq_len = args.seq_len
         self.lr = args.lr
         self.weight_decay = args.weight_decay
-        self.best_path = "models/ddg/MODMA_best.pt"
-        self.model_path = "models/ddg/MODMA.pt"
+        self.best_path = "../models/ddg/MODMA_best.pt"
+        self.model_path = "../models/ddg/MODMA.pt"
         self.pretrain_path = f"models/ddg/pretrain_{dataset_name[1]}.pt"
         self.pretrain_best_path = f"models/ddg/pretrain_{dataset_name[1]}_best.pt"
-        self.result_train_path = "results/data/ddg/train.npy"
-        self.result_test_path = "results/data/ddg/test.npy"
+        self.result_train_path = "../results/data/ddg/train.npy"
+        self.result_test_path = "../results/data/ddg/test.npy"
         args.spilt_rate = split_rate
         self.loader = []
         for i in range(dataset_num):
@@ -149,6 +175,8 @@ class DDGTrainer:
         elif self.optimizer_type == 2:
             optimizer = torch.optim.AdamW(params=parameter, lr=lr, betas=(args.beta1, args.beta2),
                                           weight_decay=args.weight_decay)
+        # elif self.optimizer_type == 3:
+        #     optimizer = torch.optim.RMSprop(params=parameter, lr=lr)
         else:
             raise NotImplementedError
         return optimizer
@@ -187,13 +215,15 @@ class DDGTrainer:
         return x, y
 
     @staticmethod
-    def get_mmd_loss(model, src_model, hidden1, hidden2, train_batch):
-        x1 = model.get_mmd_feature(train_batch[0][0].to(device))
-        x2 = src_model.get_mmd_feature(train_batch[1][0].to(device))
+    def get_mmd_loss(model, src_model: MModel, hidden1, hidden2, train_batch):
+        x1 = model.get_generalFeature(train_batch[0][0].to(device))
+        x2 = src_model.get_generalFeature(train_batch[1][0].to(device))
         mmd_feature = [hidden1(x1), hidden2(x2)]
+        # mmd_feature = [x1, x2]
         mini_shape = min([x.shape[0] for x in mmd_feature])
         mmd_loss = mmd(mmd_feature[0][:mini_shape].view(mini_shape, -1),
                        mmd_feature[1][:mini_shape].view(mini_shape, -1))
+        # mmd_loss, _, _ = shDistance(mmd_feature[0][:mini_shape], mmd_feature[1][:mini_shape])
         return mmd_loss
 
     @staticmethod
@@ -201,10 +231,8 @@ class DDGTrainer:
         x1 = model.get_generalFeature(train_batch[0][0].to(device))
         x2 = src_model.get_generalFeature(train_batch[1][0].to(device))
         generalFeature = [hidden1(x1), hidden2(x2)]
-        # generalFeature = [x1, x2]
         x = torch.cat(generalFeature, dim=0)
-        label = torch.cat([torch.zeros([len(train_batch[0][0]), 1]),
-                           torch.ones([len(train_batch[1][0]), 1])], dim=0).float()
+        label = torch.cat([torch.ones(len(train_batch[0][0])), torch.zeros(len(train_batch[1][0]))], dim=0).long()
         alpha = 2. / (1 + np.exp((-10. * p))) - 1
         x = GRL.apply(x, alpha)
         loss, correct_num_domain = discriminator(x, label.to(device))
@@ -317,39 +345,31 @@ class DDGTrainer:
         arg.step_size = 30
         arg.gamma = 0.3
         mini_iter = min([len(self.loader[i][0]) for i in range(dataset_num)])
-        train_iter = [iter(self.loader[i][0]) for i in range(dataset_num)]
+        train_iter1 = [iter(self.loader[i][0]) for i in range(dataset_num)]
+        train_iter2 = [iter(self.loader[i][0]) for i in range(dataset_num)]
         src_model = torch.load(self.pretrain_path)
         src_model.eval()
-        model = MModel(arg, num_layers=[3, 5], seq_len=seq_len[0], index=0).to(device)
-        optimizer = self.get_optimizer(arg, model.parameters(), lr=arg.lr)
-        scheduler = self.get_scheduler(optimizer, arg)
+        model = MModel(arg, seq_len=seq_len[0], index=0).to(device)
         hidden1 = Hidden(arg).to(device)
         hidden2 = Hidden(arg).to(device)
-        hidden1_ = Hidden(arg).to(device)
-        hidden2_ = Hidden(arg).to(device)
         parameter = [
             {'params': model.prepare.parameters(), 'lr': arg.lr},
             {'params': model.shareNet.parameters(), 'lr': arg.lr},
             {'params': hidden1.parameters(), 'lr': arg.lr},
-            {'params': hidden2.parameters(), 'lr': arg.lr},
-
+            {'params': hidden2.parameters(), 'lr': arg.lr}
         ]
-        share_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
-        share_scheduler = torch.optim.lr_scheduler.StepLR(share_optimizer, step_size=40, gamma=0.3)
+        mmd_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
+        mmd_scheduler = torch.optim.lr_scheduler.StepLR(mmd_optimizer, step_size=30, gamma=0.3)
         discriminator = Discriminator(arg).to(device)
         discriminator.train()
         parameter = [
-            {'params': model.prepare.parameters(), 'lr': arg.lr},
-            {'params': model.shareNet.parameters(), 'lr': arg.lr},
-            {'params': hidden1_.parameters(), 'lr': arg.lr},
-            {"params": hidden2_.parameters(), 'lr': arg.lr},
-            # {'params': src_model.prepare.parameters(), 'lr': 0.05 * arg.lr},
-            # {'params': src_model.shareNet.parameters(), 'lr': 0.05*arg.lr},
-            # {"params": hidden.parameters(), 'lr': arg.lr},
-            {"params": discriminator.parameters(), 'lr': arg.lr}
+            {'params': model.parameters(), 'lr': arg.lr},
+            {'params': hidden1.parameters(), 'lr': arg.lr},
+            {'params': hidden2.parameters(), 'lr': arg.lr},
+            {"params": discriminator.parameters(), 'lr': arg.lr},
         ]
-        disc_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
-        disc_scheduler = torch.optim.lr_scheduler.StepLR(disc_optimizer, step_size=40, gamma=0.3)
+        optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.3)
 
         best_val_accuracy = 0
         metric = Metric()
@@ -363,44 +383,59 @@ class DDGTrainer:
         val_num = len(self.loader[0][1].dataset)
         for epoch in range(self.epochs):
             model.train()
-            for batch in self.loader[0][0]:
-                loss, correct_num = self.train_step(model, optimizer, batch)
-                train_acc += correct_num.cpu().numpy()
-                train_loss += loss.data.item()
 
-            if (epoch + 1) % self.mmd_step == 0 and epoch < 101:
+            if (epoch + 1) % self.mmd_step == 0 and epoch < 99:
                 m_loss = []
                 for step in range(self.inner_iter):
                     train_batch = []
                     for i in range(dataset_num):
                         try:
-                            batch = next(train_iter[i])
+                            batch = next(train_iter1[i])
                         except StopIteration:
-                            train_iter[i] = iter(self.loader[i][0])
-                            batch = next(train_iter[i])
+                            train_iter1[i] = iter(self.loader[i][0])
+                            batch = next(train_iter1[i])
                         train_batch.append(batch)
+                    # hidden1.train()
+                    # hidden2.train()
                     mmd_loss = self.get_mmd_loss(model, src_model, hidden1, hidden2, train_batch)
                     m_loss.append(mmd_loss.data.item())
-                    share_optimizer.zero_grad()
+                    mmd_optimizer.zero_grad()
                     mmd_loss.backward()
-                    share_optimizer.step()
+                    mmd_optimizer.step()
+                print(np.mean(m_loss))
 
-                    p = epoch / self.epochs
-                    domain_loss, correct_num = self.get_domain_loss(model, src_model, hidden1_, hidden2_, discriminator,
-                                                                    train_batch, p)
-                    disc_optimizer.zero_grad()
-                    domain_loss.backward()
-                    disc_optimizer.step()
-                    domain_acc += correct_num.cpu().numpy()
-                    domain_num += len(train_batch[1][0])
-                    domain_num += len(train_batch[0][0])
-                domain_acc = domain_acc / domain_num
-                print(f"domain accuracy: {domain_acc:.3f}")
-                print(f"mmd loss: {np.mean(m_loss)}")
+            for step in range(mini_iter):
+                train_batch = []
+                for i in range(dataset_num):
+                    try:
+                        batch = next(train_iter2[i])
+                    except StopIteration:
+                        train_iter2[i] = iter(self.loader[i][0])
+                        batch = next(train_iter2[i])
+                    train_batch.append(batch)
+                # hidden1.eval()
+                # hidden2.eval()
+                p = epoch / self.epochs
+                domain_loss, correct_num = self.get_domain_loss(model, src_model, hidden1, hidden2,
+                                                                discriminator, train_batch, p)
+                domain_acc += correct_num.cpu().numpy()
+                domain_num += len(train_batch[1][0])
+                domain_num += len(train_batch[0][0])
+                batch = train_batch[0]
+                x, y = batch[0].to(device), batch[1].to(device)
+                loss, correct_num = model(x, y)
+                train_acc += correct_num.cpu().numpy()
+                train_loss += loss.data.item()
+                loss = loss + domain_loss
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+            domain_acc = domain_acc / domain_num
+            print(f"domain accuracy: {domain_acc:.3f}")
 
             scheduler.step()
-            share_scheduler.step()
-            disc_scheduler.step()
+            mmd_scheduler.step()
             print(f"epoch {epoch + 1}:")
             train_acc = train_acc / train_num
             train_loss = train_loss / mini_iter
@@ -423,9 +458,7 @@ class DDGTrainer:
                 metric.best_val_acc[0] = train_acc
                 metric.best_val_acc[1] = best_val_accuracy
                 torch.save(model, self.best_path)
-
             plt.clf()
-
             plt.plot(metric.train_acc)
             plt.plot(metric.val_acc)
             plt.ylabel("accuracy(%)")
@@ -434,7 +467,8 @@ class DDGTrainer:
             plt.title(f"train accuracy and validation accuracy")
             plt.pause(0.02)
             plt.ioff()  # 关闭画图的窗口
-
+            # if early_stop(val_loss):
+            #     break
             domain_acc = 0
             domain_num = 0
             val_acc = 0
@@ -444,7 +478,7 @@ class DDGTrainer:
         np.save(self.result_train_path, metric.item())
         torch.save(model, self.model_path)
 
-    def test(self, path=None):
+    def test(self):
         model = torch.load(self.model_path)
         metric = Metric(mode="test")
         metric.test_acc = []
@@ -486,7 +520,7 @@ class DDGTrainer:
 
 if __name__ == "__main__":
     arg = Args()
-    trainer = DDGTrainer(arg)
+    trainer = DANNTrainer(arg)
     # trainer.pretrain()
     trainer.train()
     trainer.test()

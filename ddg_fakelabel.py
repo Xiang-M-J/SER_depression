@@ -7,13 +7,11 @@ from matplotlib import pyplot as plt
 from torch.autograd import Function
 import torch.optim
 from torch.cuda.amp import autocast, GradScaler
-from einops.layers.torch import Rearrange
 import torch.nn.functional as F
 
-from Multitrain_ae import Hidden
 from config import Args
-from multiModel import MModel, mmd, Discriminator
-from utils import get_newest_file, load_loader, NoamScheduler, Metric, EarlyStopping, accuracy_cal
+from multiModel import MModel, mmd
+from utils import get_newest_file, load_loader, NoamScheduler, Metric, accuracy_cal
 
 dataset_name = ['MODMA', 'CASIA2']
 num_class = [2, 2]

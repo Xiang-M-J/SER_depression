@@ -8,8 +8,8 @@ from utils import load_dataset, get_newest_file
 args = Args()
 spilt_rate = [0.6, 0.2, 0.2]  # 训练集、验证集、测试集分割比例
 # seed_everything(args.random_seed)
-model_type = 'TCN'
-dataset_name = "MODMA"
+model_type = 'MTCN'
+dataset_name = "DAIC21"
 args.model_type = model_type
 args.dataset_name = dataset_name
 args.spilt_rate = spilt_rate

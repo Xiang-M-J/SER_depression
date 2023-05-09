@@ -82,6 +82,7 @@ class Classifier(nn.Module):
         super(Classifier, self).__init__()
         self.net = nn.Sequential(  # 用于MODMA 2分类
             Rearrange('N C L H-> N C (L H)'),
+            nn.BatchNorm1d(arg.filters),
             nn.AdaptiveAvgPool1d(1),
             Rearrange('N C L -> N (C L)'),
             nn.Linear(in_features=arg.filters, out_features=arg.num_class[i])

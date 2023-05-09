@@ -1,9 +1,8 @@
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-from Multitrain_ae import ConvBlock, UpsampleBlock
+from TransferLearning.Multitrain_ae import ConvBlock
 from einops.layers.torch import Rearrange
-from utils import Args
 import torch.distributions as dist
 
 

@@ -8,15 +8,14 @@ import torch.optim
 from torch.cuda.amp import autocast, GradScaler
 from einops.layers.torch import Rearrange
 import torch.nn.functional as F
-from torch.utils.data.dataloader import DataLoader
-from Multitrain_ae import Hidden
 from config import Args
 from multiModel import MModel, mmd, Discriminator
-from utils import get_newest_file, load_loader, NoamScheduler, Metric, EarlyStopping, accuracy_cal, myDataset
+from utils import get_newest_file, load_loader, NoamScheduler, Metric, EarlyStopping, accuracy_cal, load_dataset
+from blocks import Temporal_Aware_Block
 
 dataset_name = ['MODMA', 'CASIA']
 num_class = [2, 6]
-seq_len = [313, 188]
+seq_len = [313, 313]
 num_sample = [3549, 7200]
 split_rate = [0.6, 0.2, 0.2]
 dataset_num = len(dataset_name)
@@ -42,7 +41,7 @@ class ConvBlock(nn.Module):
         super(ConvBlock, self).__init__()
         self.conv = nn.Conv1d(in_channels=in_dim, out_channels=out_dim, kernel_size=kernel_size, padding="same")
         self.bn = nn.BatchNorm1d(out_dim)
-        self.act = nn.ReLU()
+        self.act = nn.LeakyReLU()
         self.pool = nn.MaxPool1d(pool_size)
 
     def forward(self, x):
@@ -62,7 +61,7 @@ class UpsampleBlock(nn.Module):
         else:
             self.upsample = nn.Upsample(size=size)
         self.bn = nn.BatchNorm1d(out_dim)
-        self.act = nn.ReLU()
+        self.act = nn.LeakyReLU()
 
     def forward(self, x):
         x = self.conv(x)
@@ -77,7 +76,8 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         self.conv1 = ConvBlock(arg.filters, 64, kernel_size=3, pool_size=2)
         self.conv2 = ConvBlock(64, 128, kernel_size=3, pool_size=2)
-        self.conv3 = ConvBlock(128, 256, kernel_size=3, pool_size=2)
+        self.conv3 = ConvBlock(128, 256, kernel_size=3, pool_size=3)
+
         # self.upsample1 = UpsampleBlock(256, 128, scale_factor=2)
         # self.upsample2 = UpsampleBlock(128, 64, scale_factor=2)
         # self.upsample3 = UpsampleBlock(64, arg.filters, scale_factor=2, size=arg.seq_len)
@@ -98,7 +98,7 @@ class Decoder(nn.Module):
         # self.conv1 = ConvBlock(arg.filters, 64, kernel_size=3, pool_size=2)
         # self.conv2 = ConvBlock(64, 128, kernel_size=3, pool_size=2)
         # self.conv3 = ConvBlock(128, 256, kernel_size=3, pool_size=2)
-        self.upsample1 = UpsampleBlock(256, 128, scale_factor=2)
+        self.upsample1 = UpsampleBlock(256, 128, scale_factor=3)
         self.upsample2 = UpsampleBlock(128, 64, scale_factor=2)
         self.upsample3 = UpsampleBlock(64, arg.filters, scale_factor=2, size=arg.seq_len)
 
@@ -109,7 +109,27 @@ class Decoder(nn.Module):
         x = self.upsample1(x)
         x = self.upsample2(x)
         x = self.upsample3(x)
+        return x
 
+
+class Fusion(nn.Module):
+    def __init__(self, arg: Args):
+        super(Fusion, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv1d(arg.filters, arg.filters, kernel_size=3, padding="same"),
+            nn.BatchNorm1d(arg.filters),
+            nn.LeakyReLU(),
+        )
+        self.l1 = nn.Sequential(
+            nn.Linear(arg.seq_len, arg.seq_len),
+            nn.LeakyReLU(),
+        )
+
+    def forward(self, x):
+        for _ in range(3):
+            x = self.conv1(x)
+        for _ in range(2):
+            x = self.l1(x)
         return x
 
 
@@ -118,18 +138,18 @@ class MultiTrainer:
         args.num_class = num_class
         self.optimizer_type = args.optimizer_type
         self.epochs = args.epochs
-        self.iteration = 4000
+        self.iteration = 4200
         self.inner_iter = 50
         self.feature_dim = args.feature_dim
         self.batch_size = args.batch_size
         self.seq_len = args.seq_len
         self.lr = args.lr
         self.weight_decay = args.weight_decay
-        self.best_path = "models/Multi/MODMA_best.pt"
-        self.encoder_final_path = f"models/Multi/encoder.pt"
-        self.model_path = "models/Multi/MODMA.pt"
-        self.pretrain_path = "models/Multi/pretrain.pt"
-        self.pretrain_best_path = "models/Multi/pretrain_best.pt"
+        self.best_path = "../models/Multi/MODMA_best.pt"
+        self.encoder_final_path = f"../models/Multi/Encoder.pt"
+        self.model_path = "../models/Multi/MODMA.pt"
+        self.pretrain_path = "../models/Multi/pretrain.pt"
+        self.pretrain_best_path = "../models/Multi/pretrain_best.pt"
         self.pretext_epochs = 50
         self.random_seed = args.random_seed
         args.spilt_rate = split_rate
@@ -187,27 +207,16 @@ class MultiTrainer:
         return loss, correct_num
 
     def train_step(self, model, optimizer, batch):
-        x, y = self.get_data(batch)
-        optimizer.zero_grad()
-        if use_amp:
-            with autocast():
-                loss, correct_num = model(x, y)
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
-        else:
-            loss, correct_num = model(x, y)
-            loss.backward()
-            optimizer.step()
-        return loss, correct_num
-
-    def train_step_2(self, model, optimizer, batch):
         x, y = self.get_data(batch[0])
         fake_x, fake_y = self.get_data(batch[1])
         mini_shape = fake_x.shape[0]
+        # 没有fusion
         x_f = model.prepare(x[:mini_shape])
         x_b = model.prepare(torch.flip(x[:mini_shape], dims=[-1]))
         x_1, _, _ = model.shareNet(x_f, x_b)
+        # 有fusion
+        # x_1, fake_x, _ = model.shareNet(fake_x[:mini_shape], fake_x[:mini_shape])
+
         x_2, _ = model.specialNet[0](fake_x)
         fake_x = model.specialNet[1](torch.cat([x_1, x_2], dim=-1))
         fake_x = model.specialNet[2](fake_x)
@@ -243,16 +252,21 @@ class MultiTrainer:
         return x, y
 
     @staticmethod
-    def fake_step(model, src_model, encoder, decoder, train_batch):
-        x1 = model.get_generalFeature(train_batch[0][0].to(device))
-        x2 = src_model.get_generalFeature(train_batch[1][0].to(device))
+    def fake_step(model, src_model, encoder, decoder, fusion, train_batch):
+        x1, x2 = train_batch[0][0], train_batch[1][0]
         mini_shape = min(x1.shape[0], x2.shape[0])
-        x1, x2 = x1[:mini_shape], x2[:mini_shape]
+        x1, x2 = x1[:mini_shape].to(device), x2[:mini_shape].to(device)
+        x_f = model.prepare(x1)
+        x_b = model.prepare(torch.flip(x1, dims=[-1]))
+        _, x1, _ = model.shareNet(x_f, x_b)
+        x2 = src_model.get_generalFeature(x2)
         h_x1, h_x2 = encoder(x1), encoder(x2)
         r_x1 = decoder(h_x1)
-        ae_loss = F.mse_loss(x1, r_x1)
+        r_xf = fusion(r_x1)
+        ae_loss1 = F.mse_loss(x1, r_x1)
+        ae_loss2 = F.mse_loss(x_f, r_xf)
         mmd_loss = mmd(h_x1.view(mini_shape, -1), h_x2.view(mini_shape, -1))
-        return mmd_loss + ae_loss
+        return mmd_loss + ae_loss1 + ae_loss2
 
     def val_step(self, model, batch):
         x, y = self.get_data(batch)
@@ -302,16 +316,20 @@ class MultiTrainer:
         src_model.eval()
         encoder = Encoder(arg).to(device)
         decoder = Decoder(arg).to(device)
+        fusion = Fusion(arg).to(device)
         parameter = [
-            {'params': encoder.parameters(), 'lr': 5e-4},
-            {'params': decoder.parameters(), 'lr': 5e-4}
+            {'params': encoder.parameters(), 'lr': 1e-3},
+            {'params': decoder.parameters(), 'lr': 1e-3},
+            {'params': fusion.parameters(), 'lr': 1e-3}
         ]
-        fake_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
-        fake_scheduler = torch.optim.lr_scheduler.StepLR(fake_optimizer, step_size=10, gamma=0.2)
+        # fake_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
+        fake_optimizer = torch.optim.AdamW(parameter, lr=1e-3)
+        fake_scheduler = torch.optim.lr_scheduler.StepLR(fake_optimizer, step_size=10, gamma=0.3)
         m_loss = []
         for step in range(3000):
             encoder.train()
             decoder.train()
+            fusion.train()
             train_batch = []
             for i in range(dataset_num):
                 try:
@@ -320,71 +338,45 @@ class MultiTrainer:
                     train_iter[i] = iter(loader[i][0])
                     batch = next(train_iter[i])
                 train_batch.append(batch)
-            loss = self.fake_step(model, src_model, encoder, decoder, train_batch)
+            loss = self.fake_step(model, src_model, encoder, decoder, fusion, train_batch)
             m_loss.append(loss.data.item())
             fake_optimizer.zero_grad()
             loss.backward()
             fake_optimizer.step()
-
             if step % 50 == 0:
                 print(f"step: {step}")
                 print(np.mean(m_loss))
                 m_loss = []
                 fake_scheduler.step()
-        torch.save(encoder, "models/Multi/Encoder_label.pt")
-        torch.save(decoder, "models/Multi/Decoder_label.pt")
-
-    @staticmethod
-    def get_domain_loss(model, src_model, hidden, discriminator, train_batch, p):
-        x1 = model.get_generalFeature(train_batch[0][0].to(device))
-        x2 = src_model.get_generalFeature(train_batch[1][0].to(device))
-        generalFeature = [hidden(x1), hidden(x2)]
-        x = torch.cat(generalFeature, dim=0)
-        label = torch.cat([torch.ones(len(train_batch[0][0])), torch.zeros(len(train_batch[1][0]))], dim=0).long()
-        alpha = 2. / (1 + np.exp((-10. * p))) - 1
-        x = GRL.apply(x, alpha)
-        loss, correct_num_domain = discriminator(x, label.to(device))
-        return loss, correct_num_domain
-
-    def get_src_loader(self, dataset_name, batch_size):
-        data = np.load(f'D:/xmj/SER_depression/preprocess/data/{dataset_name}_V1_order3.npy', allow_pickle=True).item()
-        x = data['x']
-        y = data['y']
-        Num = x.shape[0]  # 样本数
-        split_num = int(num_sample[0] * split_rate[0])
-        shuffle_ix = np.random.permutation(np.arange(Num))
-        x = x[shuffle_ix]
-        y = y[shuffle_ix]
-        x = x[:split_num]
-        y = y[:split_num]
-        dataset = myDataset(x, y)  # input shape of x: [样本数，特征维度，时间步]  input shape of y: [样本数，类别数]
-        loader = DataLoader(dataset, batch_size=batch_size)
-        return loader
+        torch.save(encoder, "../models/Multi/Encoder_data.pt")
+        torch.save(decoder, "../models/Multi/Decoder_data.pt")
+        torch.save(fusion, "../models/Multi/Fusion_data.pt")
 
     def train(self):
         loader = self.get_loader([64, 32])
-        loader[1] = [self.get_src_loader(dataset_name[1], batch_size=32)]
         mini_iter = min([len(loader[i][0]) for i in range(dataset_num)])
         train_iter = [iter(loader[i][0]) for i in range(dataset_num)]
         src_model = torch.load(self.pretrain_path)
         src_model.eval()
         model = MModel(arg, seq_len=seq_len[0], index=0).to(device)
-        optimizer = torch.optim.AdamW(model.parameters(), lr=4e-4, weight_decay=0.1, betas=(0.93, 0.99))
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.5)
-
-        encoder = torch.load("models/Multi/Encoder_label.pt").to(device)
-        encoder.train()
-        decoder = torch.load("models/Multi/Decoder_label.pt").to(device)
-        decoder.train()
-
+        optimizer = self.get_optimizer(arg, model.parameters(), lr=arg.lr)
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50)
+        # encoder = Encoder(arg).to(device)
+        # decoder = Decoder(arg).to(device)
+        encoder = torch.load("models/Multi/Encoder_data.pt").to(device)
+        encoder.eval()
+        decoder = torch.load("models/Multi/Decoder_data.pt").to(device)
+        decoder.eval()
+        fusion = torch.load("models/Multi/Fusion_data.pt").to(device)
+        fusion.eval()
         parameter = [
-            {"params": encoder.parameters(), 'lr': 1e-3},
-            {"params": decoder.parameters(), 'lr': 1e-3},
-            # {"params": model.prepare.parameters(), 'lr': 1e-3},
-            # {"params": model.shareNet.parameters(), 'lr': 1e-3},
+            {'params': model.prepare.parameters(), 'lr': arg.lr},
+            {'params': model.shareNet.parameters(), 'lr': arg.lr},
+            # {'params': encoder.parameters(), 'lr': arg.lr},
+            # {'params': decoder.parameters(), 'lr': arg.lr}
         ]
-        fake_optimizer = torch.optim.AdamW(parameter, betas=(0.93, 0.99), weight_decay=0.1)
-        fake_scheduler = torch.optim.lr_scheduler.StepLR(fake_optimizer, step_size=50, gamma=0.5)
+        fake_optimizer = self.get_optimizer(arg, parameter, lr=arg.lr)
+        fake_scheduler = self.get_scheduler(fake_optimizer, arg)
 
         best_val_accuracy = 0
         metric = Metric()
@@ -396,118 +388,86 @@ class MultiTrainer:
         val_loss = 0
         train_acc = 0
         train_loss = 0
-        m_loss = []
-        for epoch in range(150):
+        for step in range(self.iteration):
             model.train()
-
-            if epoch < 50:
-                for batch in loader[0][0]:
-                    loss, correct_num = self.train_step(model, optimizer, batch)
-                    train_acc += correct_num.cpu().numpy()
-                    train_loss += loss.data.item()
-                    train_num += len(batch[0])
-            else:
-                for _ in range(len(loader[0])):
-                    train_batch = []
-                    for i in range(dataset_num):
-                        try:
-                            batch = next(train_iter[i])
-                        except StopIteration:
-                            train_iter[i] = iter(loader[i][0])
-                            batch = next(train_iter[i])
-                        train_batch.append(batch)
-                    mini_shape = min(train_batch[0][0].shape[0], train_batch[1][0].shape[0])
-                    fake_x = decoder(encoder(train_batch[1][0][:mini_shape].to(device)))
-                    fake_y = train_batch[0][1][:mini_shape]
-                    train_batch[1] = [fake_x, fake_y]
-                    loss, correct_num = self.train_step_2(model, optimizer, train_batch)
-                    train_acc += correct_num.cpu().numpy()
-                    train_loss += loss.data.item()
-                    train_num += len(train_batch[0][0])
-                    train_num += len(train_batch[1][0])
-
-            if epoch % 2 == 0:
-                for _ in range(len(loader[0])):
-                    train_batch = []
-                    for i in range(dataset_num):
-                        try:
-                            batch = next(train_iter[i])
-                        except StopIteration:
-                            train_iter[i] = iter(loader[i][0])
-                            batch = next(train_iter[i])
-                        train_batch.append(batch)
-                    loss = self.fake_step(model, src_model, encoder, decoder, train_batch)
-                    m_loss.append(loss.data.item())
-                    fake_optimizer.zero_grad()
-                    loss.backward()
-                    fake_optimizer.step()
-            # p = (step+1) / self.iteration
-            # domain_loss, correct_num = self.get_domain_loss(model, src_model, hidden, discriminator,
-            #                                                 train_batch, p)
-            # disc_optimizer.zero_grad()
-            # domain_loss.backward()
-            # disc_optimizer.step()
-            # loss = self.fake_step(model, src_model, encoder, decoder, train_batch)
-            # mmd_optimizer.zero_grad()
-            # loss.backward()
-            # mmd_optimizer.step()
-            # for _ in range(self.inner_iter):
-
-            # print(np.mean(m_loss))
-
-            print(f"epoch: {epoch + 1}")
             m_loss = []
-            for param in optimizer.param_groups:
-                print(param['lr'])
-            # scheduler.step()
-            # mmd_scheduler.step()
-            train_acc = train_acc / train_num
-            train_loss = train_loss / mini_iter
-            metric.train_acc.append(train_acc)
-            metric.train_loss.append(train_loss)
-            print(f"MODMA: train Loss:{train_loss:.4f}\t train Accuracy:{train_acc * 100:.3f}\t")
-            model.eval()
-            with torch.no_grad():
-                for batch in loader[0][1]:
-                    loss, correct_num = self.val_step(model, batch)
-                    val_acc += correct_num.cpu().numpy()
-                    val_loss += loss.data.item()
-            val_acc = val_acc / int(num_sample[0] * split_rate[1])
-            val_loss = val_loss / math.ceil(int(num_sample[0] * split_rate[1]) / self.batch_size)
-            metric.val_acc.append(val_acc)
-            metric.val_loss.append(val_loss)
-            print(f"MODMA: val Loss:{val_loss:.4f}\t val Accuracy:{val_acc * 100:.3f}\t")
-            if val_acc > best_val_accuracy:
-                best_val_accuracy = val_acc
-                metric.best_val_acc[0] = train_acc
-                metric.best_val_acc[1] = best_val_accuracy
-                torch.save(model, self.best_path)
+            train_batch = []
+            for i in range(dataset_num):
+                try:
+                    batch = next(train_iter[i])
+                except StopIteration:
+                    train_iter[i] = iter(loader[i][0])
+                    batch = next(train_iter[i])
+                train_batch.append(batch)
 
-            plt.clf()
-            plt.plot(metric.train_acc)
-            plt.plot(metric.val_acc)
-            plt.ylabel("accuracy(%)")
-            plt.xlabel("epoch")
-            plt.legend([f' train acc', f'val acc'])
-            plt.title(f"train accuracy and validation accuracy")
-            plt.pause(0.02)
-            plt.ioff()  # 关闭画图的窗口
+            # for _ in range(self.inner_iter):
+            #     loss = self.fake_step(model, src_model, encoder, decoder, train_batch)
+            #     m_loss.append(loss.data.item())
+            #     fake_optimizer.zero_grad()
+            #     loss.backward()
+            #     fake_optimizer.step()
+            # print(np.mean(m_loss))
+            mini_shape = min(train_batch[0][0].shape[0], train_batch[1][0].shape[0])
+            fake_x = (decoder(encoder(train_batch[1][0][:mini_shape].to(device))))
+            fake_y = train_batch[0][1][:mini_shape]
+            train_batch[1] = [fake_x, fake_y]
 
-            train_num = 0
-            domain_acc = 0
-            tgt_acc = 0
-            domain_num = 0
-            val_acc = 0
-            val_loss = 0
-            train_acc = 0
-            train_loss = 0
-        np.save("results/data/Multi/MODMA.npy", metric.item())
+            loss, correct_num = self.train_step(model, optimizer, train_batch)
+            train_acc += correct_num.cpu().numpy()
+            train_loss += loss.data.item()
+            train_num += len(train_batch[0][0])
+            train_num += len(train_batch[1][0])
+
+            if (step + 1) % mini_iter == 0:
+                print(f"step: {step + 1}")
+                # scheduler.step()
+                train_acc = train_acc / train_num
+                train_loss = train_loss / mini_iter
+                metric.train_acc.append(train_acc)
+                metric.train_loss.append(train_loss)
+                print(f"MODMA: train Loss:{train_loss:.4f}\t train Accuracy:{train_acc * 100:.3f}\t")
+                model.eval()
+                with torch.no_grad():
+                    for batch in loader[0][1]:
+                        loss, correct_num = self.val_step(model, batch)
+                        val_acc += correct_num.cpu().numpy()
+                        val_loss += loss.data.item()
+                val_acc = val_acc / int(num_sample[0] * split_rate[1])
+                val_loss = val_loss / math.ceil(int(num_sample[0] * split_rate[1]) / self.batch_size)
+                metric.val_acc.append(val_acc)
+                metric.val_loss.append(val_loss)
+                print(f"MODMA: val Loss:{val_loss:.4f}\t val Accuracy:{val_acc * 100:.3f}\t")
+                if val_acc > best_val_accuracy:
+                    best_val_accuracy = val_acc
+                    metric.best_val_acc[0] = train_acc
+                    metric.best_val_acc[1] = best_val_accuracy
+                    torch.save(model, self.best_path)
+
+                plt.clf()
+                plt.plot(metric.train_acc)
+                plt.plot(metric.val_acc)
+                plt.ylabel("accuracy(%)")
+                plt.xlabel("epoch")
+                plt.legend([f' train acc', f'val acc'])
+                plt.title(f"train accuracy and validation accuracy")
+                plt.pause(0.02)
+                plt.ioff()  # 关闭画图的窗口
+
+                train_num = 0
+                domain_acc = 0
+                tgt_acc = 0
+                domain_num = 0
+                val_acc = 0
+                val_loss = 0
+                train_acc = 0
+                train_loss = 0
+        np.save("../results/data/Multi/MODMA.npy", metric.item())
         torch.save(model, self.model_path)
 
     def test(self, path=None):
         loader = self.get_loader(batch_size=[64, 64])
         if path is None:
-            path = get_newest_file("models/Multi/")
+            path = get_newest_file("../models/Multi/")
             print(f"path is None, choose the newest model: {path}")
         if not os.path.exists(path):
             print(f"error! cannot find the {path}")
@@ -548,13 +508,12 @@ class MultiTrainer:
         print(f"{dataset_name}: test Loss:{test_loss:.4f}\t test Accuracy:{test_acc * 100:.3f}\t")
         metric.test_acc.append(test_acc)
         metric.test_loss.append(test_loss)
-        np.save("results/data/Multi/test.npy", metric.item())
+        np.save("../results/data/Multi/test.npy", metric.item())
 
 
 if __name__ == "__main__":
     arg = Args()
     trainer = MultiTrainer(arg)
     # trainer.pretext()
-    # trainer.pretrain()
     trainer.train()
     trainer.test()

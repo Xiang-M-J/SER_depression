@@ -13,7 +13,7 @@ from baseline import TIM, SET, Transformer_TIM, Transformer, LSTM, TemporalConvN
 from config import Args
 from model import AT_TIM, Transformer_DeltaTIM, AT_DeltaTIM, MTCN
 from utils import Metric, accuracy_cal, check_dir, MODMA_LABELS, plot_matrix, plot, logger, EarlyStopping, \
-    IEMOCAP_LABELS, NoamScheduler, ModelSave
+    IEMOCAP_LABELS, NoamScheduler, ModelSave, EarlyStoppingLoss
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -185,6 +185,7 @@ class Agent:
 
         loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=0.1).to(device)  # label_smoothing=0.1 相当于smooth_labels的功能
         early_stop = EarlyStopping(patience=self.args.patience)
+        # early_stop = EarlyStoppingLoss(patience=5, delta_loss=2e-4)
         # model_save = ModelSave(save_path=self.save_path, )
         scheduler = self.get_scheduler(optimizer, arg=self.args)
         best_val_accuracy = 0
@@ -267,6 +268,8 @@ class Agent:
                 print(f"val_accuracy did not improve from {best_val_accuracy}")
             if early_stop(metric.val_acc[-1]):
                 break
+            # if early_stop(metric.val_loss[-1]):
+            #     break
             if metric.val_acc[-1] > 99.4:
                 self.test_acc.append(self.multi_test_step(model, test_dataset=test_dataset))
 

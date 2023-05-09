@@ -125,11 +125,11 @@ class MultiTrainer:
         self.seq_len = args.seq_len
         self.lr = args.lr
         self.weight_decay = args.weight_decay
-        self.best_path = "models/Multi/MODMA_best.pt"
-        self.encoder_final_path = f"models/Multi/encoder.pt"
-        self.model_path = "models/Multi/MODMA.pt"
-        self.pretrain_path = "models/Multi/pretrain.pt"
-        self.pretrain_best_path = "models/Multi/pretrain_best.pt"
+        self.best_path = "../models/Multi/MODMA_best.pt"
+        self.encoder_final_path = f"../models/Multi/Encoder.pt"
+        self.model_path = "../models/Multi/MODMA.pt"
+        self.pretrain_path = "../models/Multi/pretrain.pt"
+        self.pretrain_best_path = "../models/Multi/pretrain_best.pt"
         self.pretext_epochs = 50
         self.random_seed = args.random_seed
         args.spilt_rate = split_rate
@@ -316,8 +316,8 @@ class MultiTrainer:
                 print(np.mean(m_loss))
                 m_loss = []
                 fake_scheduler.step()
-        torch.save(encoder, "models/Multi/Encoder_label.pt")
-        torch.save(decoder, "models/Multi/Decoder_label.pt")
+        torch.save(encoder, "../models/Multi/Encoder_label.pt")
+        torch.save(decoder, "../models/Multi/Decoder_label.pt")
 
     @staticmethod
     def get_domain_loss(model, src_model, hidden, discriminator, train_batch, p):
@@ -464,13 +464,13 @@ class MultiTrainer:
                 val_loss = 0
                 train_acc = 0
                 train_loss = 0
-        np.save("results/data/Multi/MODMA.npy", metric.item())
+        np.save("../results/data/Multi/MODMA.npy", metric.item())
         torch.save(model, self.model_path)
 
     def test(self, path=None):
         loader = self.get_loader(batch_size=[64, 64])
         if path is None:
-            path = get_newest_file("models/Multi/")
+            path = get_newest_file("../models/Multi/")
             print(f"path is None, choose the newest model: {path}")
         if not os.path.exists(path):
             print(f"error! cannot find the {path}")
@@ -511,7 +511,7 @@ class MultiTrainer:
         print(f"{dataset_name}: test Loss:{test_loss:.4f}\t test Accuracy:{test_acc * 100:.3f}\t")
         metric.test_acc.append(test_acc)
         metric.test_loss.append(test_loss)
-        np.save("results/data/Multi/test.npy", metric.item())
+        np.save("../results/data/Multi/test.npy", metric.item())
 
 
 if __name__ == "__main__":

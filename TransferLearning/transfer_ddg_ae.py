@@ -177,12 +177,12 @@ class DDGTrainer:
         self.seq_len = args.seq_len
         self.lr = args.lr
         self.weight_decay = args.weight_decay
-        self.best_path = "models/ddg/MODMA_best.pt"
-        self.model_path = "models/ddg/MODMA.pt"
+        self.best_path = "../models/ddg/MODMA_best.pt"
+        self.model_path = "../models/ddg/MODMA.pt"
         self.pretrain_path = f"models/ddg/pretrain_{dataset_name[1]}.pt"
         self.pretrain_best_path = f"models/ddg/pretrain_{dataset_name[1]}_best.pt"
-        self.result_train_path = "results/data/ddg/train.npy"
-        self.result_test_path = "results/data/ddg/test.npy"
+        self.result_train_path = "../results/data/ddg/train.npy"
+        self.result_test_path = "../results/data/ddg/test.npy"
         args.spilt_rate = split_rate
         self.loader = []
         for i in range(dataset_num):

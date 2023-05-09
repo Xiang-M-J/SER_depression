@@ -594,7 +594,11 @@ class MTCN(nn.Module):
         # )
         # Linear
         self.merge = nn.Sequential(
+            # 加上BatchNorm和Dropout后容易验证集虚高
             nn.Linear(args.dilation, 1),
+            Rearrange("N C L H -> N C (L H)"),
+            nn.BatchNorm1d(args.filters),
+            # nn.ReLU(),
             # nn.Dropout(0.3)
         )
         # self.classifier = nn.Sequential(
@@ -605,7 +609,6 @@ class MTCN(nn.Module):
         #     nn.Linear(in_features=args.filters, out_features=args.num_class)
         # )
         self.classifier = nn.Sequential(
-            Rearrange("N C L H -> N C (L H)"),
             nn.AdaptiveAvgPool1d(1),
             # nn.Linear(args.seq_len, 1),
             # nn.Dropout(0.5),

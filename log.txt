@@ -14592,3 +14592,764 @@ classification report:
 weighted avg       0.97      0.97      0.97       711
 
 ========================	test end	========================
+
+========================	2023-05-08 15:08:11	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	2023-05-08 15:08:41	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.1986	 train accuracy: 100.000	 validation loss: 0.2187	 validation accuracy: 99.154 
+train(max_min): 	train loss: 0.1986	 train accuracy: 100.000	 validation loss: 0.2138	 validation accuracy: 99.295 
+best val accuracy: 99.294781 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0911 	 test accuracy:	 98.453 
+confusion matrix: 
+[370   4]
+[  7 330]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.98      0.99      0.99       374
+         MDD       0.99      0.98      0.98       337
+
+    accuracy                           0.98       711
+   macro avg       0.98      0.98      0.98       711
+weighted avg       0.98      0.98      0.98       711
+
+test: 			test loss: 	0.0918 	 test accuracy:	 98.594 
+confusion matrix: 
+[371   3]
+[  7 330]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.98      0.99      0.99       374
+         MDD       0.99      0.98      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 15:13:35	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.1985	 train accuracy: 100.000	 validation loss: 0.2078	 validation accuracy: 99.436 
+train(max_min): 	train loss: 0.1985	 train accuracy: 100.000	 validation loss: 0.2078	 validation accuracy: 99.436 
+best val accuracy: 99.435825 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0695 	 test accuracy:	 98.875 
+confusion matrix: 
+[370   4]
+[  4 333]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+test: 			test loss: 	0.0714 	 test accuracy:	 98.875 
+confusion matrix: 
+[369   5]
+[  3 334]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 15:23:43	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	2023-05-08 15:24:38	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.1986	 train accuracy: 100.000	 validation loss: 0.2153	 validation accuracy: 99.295 
+train(max_min): 	train loss: 0.1986	 train accuracy: 100.000	 validation loss: 0.2105	 validation accuracy: 99.436 
+best val accuracy: 99.435825 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0656 	 test accuracy:	 99.297 
+confusion matrix: 
+[372   2]
+[  3 334]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+test: 			test loss: 	0.0700 	 test accuracy:	 99.297 
+confusion matrix: 
+[372   2]
+[  3 334]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 15:29:57	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.1985	 train accuracy: 100.000	 validation loss: 0.2034	 validation accuracy: 99.718 
+train(max_min): 	train loss: 0.1985	 train accuracy: 100.000	 validation loss: 0.2023	 validation accuracy: 99.859 
+best val accuracy: 99.858956 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0747 	 test accuracy:	 99.015 
+confusion matrix: 
+[370   4]
+[  3 334]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+test: 			test loss: 	0.0778 	 test accuracy:	 99.015 
+confusion matrix: 
+[371   3]
+[  4 333]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 15:37:15	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.1985	 train accuracy: 100.000	 validation loss: 0.2072	 validation accuracy: 99.436 
+train(max_min): 	train loss: 0.1985	 train accuracy: 100.000	 validation loss: 0.2048	 validation accuracy: 99.718 
+best val accuracy: 99.717913 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0730 	 test accuracy:	 98.875 
+confusion matrix: 
+[371   3]
+[  5 332]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+test: 			test loss: 	0.0803 	 test accuracy:	 98.875 
+confusion matrix: 
+[372   2]
+[  6 331]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.98      0.99      0.99       374
+         MDD       0.99      0.98      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 15:43:28	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.1985	 train accuracy: 100.000	 validation loss: 0.2110	 validation accuracy: 99.154 
+train(max_min): 	train loss: 0.1985	 train accuracy: 100.000	 validation loss: 0.2088	 validation accuracy: 99.436 
+best val accuracy: 99.435825 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0833 	 test accuracy:	 98.453 
+confusion matrix: 
+[370   4]
+[  7 330]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.98      0.99      0.99       374
+         MDD       0.99      0.98      0.98       337
+
+    accuracy                           0.98       711
+   macro avg       0.98      0.98      0.98       711
+weighted avg       0.98      0.98      0.98       711
+
+test: 			test loss: 	0.0824 	 test accuracy:	 98.031 
+confusion matrix: 
+[371   3]
+[ 11 326]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.97      0.99      0.98       374
+         MDD       0.99      0.97      0.98       337
+
+    accuracy                           0.98       711
+   macro avg       0.98      0.98      0.98       711
+weighted avg       0.98      0.98      0.98       711
+
+========================	test end	========================
+
+========================	2023-05-08 15:50:13	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.1992	 train accuracy: 100.000	 validation loss: 0.2084	 validation accuracy: 99.295 
+train(max_min): 	train loss: 0.1992	 train accuracy: 100.000	 validation loss: 0.2042	 validation accuracy: 99.577 
+best val accuracy: 99.576869 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0704 	 test accuracy:	 99.156 
+confusion matrix: 
+[373   1]
+[  5 332]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      1.00      0.99       374
+         MDD       1.00      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+test: 			test loss: 	0.0725 	 test accuracy:	 99.015 
+confusion matrix: 
+[372   2]
+[  5 332]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 15:56:03	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.1993	 train accuracy: 100.000	 validation loss: 0.2054	 validation accuracy: 99.577 
+train(max_min): 	train loss: 0.1993	 train accuracy: 100.000	 validation loss: 0.2010	 validation accuracy: 99.859 
+best val accuracy: 99.858956 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0716 	 test accuracy:	 99.015 
+confusion matrix: 
+[373   1]
+[  6 331]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.98      1.00      0.99       374
+         MDD       1.00      0.98      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+test: 			test loss: 	0.0770 	 test accuracy:	 98.734 
+confusion matrix: 
+[371   3]
+[  6 331]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.98      0.99      0.99       374
+         MDD       0.99      0.98      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 16:01:30	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.2009	 train accuracy: 100.000	 validation loss: 0.2114	 validation accuracy: 99.295 
+train(max_min): 	train loss: 0.2009	 train accuracy: 100.000	 validation loss: 0.2086	 validation accuracy: 99.718 
+best val accuracy: 99.717913 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0658 	 test accuracy:	 99.015 
+confusion matrix: 
+[371   3]
+[  4 333]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+test: 			test loss: 	0.0636 	 test accuracy:	 99.437 
+confusion matrix: 
+[372   2]
+[  2 335]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 16:07:13	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.2009	 train accuracy: 100.000	 validation loss: 0.2087	 validation accuracy: 99.154 
+train(max_min): 	train loss: 0.2009	 train accuracy: 100.000	 validation loss: 0.2064	 validation accuracy: 99.436 
+best val accuracy: 99.435825 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0734 	 test accuracy:	 99.156 
+confusion matrix: 
+[371   3]
+[  3 334]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+test: 			test loss: 	0.0778 	 test accuracy:	 98.875 
+confusion matrix: 
+[369   5]
+[  3 334]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 16:15:32	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.2010	 train accuracy: 100.000	 validation loss: 0.2082	 validation accuracy: 99.295 
+train(max_min): 	train loss: 0.2010	 train accuracy: 100.000	 validation loss: 0.2046	 validation accuracy: 99.718 
+best val accuracy: 99.717913 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0721 	 test accuracy:	 99.297 
+confusion matrix: 
+[373   1]
+[  4 333]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      1.00      0.99       374
+         MDD       1.00      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+test: 			test loss: 	0.0682 	 test accuracy:	 99.297 
+confusion matrix: 
+[373   1]
+[  4 333]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      1.00      0.99       374
+         MDD       1.00      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 16:19:16	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.2010	 train accuracy: 100.000	 validation loss: 0.2047	 validation accuracy: 99.577 
+train(max_min): 	train loss: 0.2010	 train accuracy: 100.000	 validation loss: 0.2023	 validation accuracy: 100.000 
+best val accuracy: 100.000000 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0677 	 test accuracy:	 99.578 
+confusion matrix: 
+[374   0]
+[  3 334]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      1.00      1.00       374
+         MDD       1.00      0.99      1.00       337
+
+    accuracy                           1.00       711
+   macro avg       1.00      1.00      1.00       711
+weighted avg       1.00      1.00      1.00       711
+
+test: 			test loss: 	0.0695 	 test accuracy:	 99.297 
+confusion matrix: 
+[374   0]
+[  5 332]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      1.00      0.99       374
+         MDD       1.00      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 16:22:37	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.2010	 train accuracy: 100.000	 validation loss: 0.2061	 validation accuracy: 99.577 
+train(max_min): 	train loss: 0.2010	 train accuracy: 100.000	 validation loss: 0.2056	 validation accuracy: 99.718 
+best val accuracy: 99.717913 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0724 	 test accuracy:	 99.015 
+confusion matrix: 
+[371   3]
+[  4 333]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+test: 			test loss: 	0.0782 	 test accuracy:	 98.875 
+confusion matrix: 
+[369   5]
+[  3 334]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 16:25:28	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.2010	 train accuracy: 100.000	 validation loss: 0.2051	 validation accuracy: 99.577 
+train(max_min): 	train loss: 0.2010	 train accuracy: 100.000	 validation loss: 0.2040	 validation accuracy: 99.718 
+best val accuracy: 99.717913 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0712 	 test accuracy:	 99.015 
+confusion matrix: 
+[373   1]
+[  6 331]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.98      1.00      0.99       374
+         MDD       1.00      0.98      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+test: 			test loss: 	0.0785 	 test accuracy:	 98.875 
+confusion matrix: 
+[372   2]
+[  6 331]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.98      0.99      0.99       374
+         MDD       0.99      0.98      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 16:30:54	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.2009	 train accuracy: 100.000	 validation loss: 0.2058	 validation accuracy: 99.718 
+train(max_min): 	train loss: 0.2009	 train accuracy: 100.000	 validation loss: 0.2050	 validation accuracy: 99.859 
+best val accuracy: 99.858956 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0748 	 test accuracy:	 98.875 
+confusion matrix: 
+[370   4]
+[  4 333]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+test: 			test loss: 	0.0780 	 test accuracy:	 98.875 
+confusion matrix: 
+[370   4]
+[  4 333]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 16:37:12	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.2009	 train accuracy: 100.000	 validation loss: 0.2106	 validation accuracy: 99.154 
+train(max_min): 	train loss: 0.2009	 train accuracy: 100.000	 validation loss: 0.2096	 validation accuracy: 99.436 
+best val accuracy: 99.435825 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0715 	 test accuracy:	 99.156 
+confusion matrix: 
+[372   2]
+[  4 333]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+test: 			test loss: 	0.0695 	 test accuracy:	 99.015 
+confusion matrix: 
+[372   2]
+[  5 332]
+
+classification report: 
+              precision    recall  f1-score   support
+
+          HC       0.99      0.99      0.99       374
+         MDD       0.99      0.99      0.99       337
+
+    accuracy                           0.99       711
+   macro avg       0.99      0.99      0.99       711
+weighted avg       0.99      0.99      0.99       711
+
+========================	test end	========================
+
+========================	2023-05-08 16:50:52	========================
+model name: 	MTCN_AT_DIFF_DAIC2_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_DAIC2_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: DAIC2	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 188	num_class: 2	
+
+
+========================	2023-05-08 20:07:30	========================
+model name: 	MTCN_AT_DIFF_DAIC21_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_DAIC21_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: DAIC21	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	2023-05-08 20:09:23	========================
+model name: 	MTCN_AT_DIFF_DAIC21_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_DAIC21_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: DAIC21	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
