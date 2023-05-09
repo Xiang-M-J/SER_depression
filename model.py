@@ -555,6 +555,40 @@ class TAB_DIFF(nn.Module):
         return stack_layer, x
 
 
+class AT_DIFF_Block(nn.Module):
+    def __init__(self, arg: Args, num_layers=None, is_prepare=False):
+        super(AT_DIFF_Block, self).__init__()
+        if num_layers is None:
+            num_layers = [3, 5]
+        self.is_prepare = is_prepare
+        if is_prepare:
+            self.prepare = nn.Sequential(
+                nn.Conv1d(in_channels=arg.feature_dim, out_channels=arg.filters, kernel_size=1, padding=0),
+                nn.BatchNorm1d(arg.filters),
+                nn.ReLU(),
+            )
+        self.block1 = AT_TAB(arg, num_layers, 0)
+        self.block2 = TAB_DIFF(arg, num_layers, 1)
+        arg.dilation = num_layers[0] + num_layers[1]
+        self.merge = nn.Sequential(
+            nn.Linear(arg.dilation, 1),
+            Rearrange("N C L H -> N C (L H)"),
+            nn.BatchNorm1d(arg.filters),
+        )
+
+    def forward(self, x):
+        if self.is_prepare:
+            x_f = self.prepare(x)
+            x_b = self.prepare(torch.flip(x, dims=[-1]))
+        else:
+            x_f = x
+            x_b = torch.flip(x, dims=[-1])
+        x_1, x_f, _ = self.block1(x_f, x_b)
+        x_2, x_f = self.block2(x_f)
+        x = self.merge(torch.cat([x_1, x_2], dim=-1))
+        return x
+
+
 class MTCN(nn.Module):
     """
     old result:
@@ -649,11 +683,15 @@ class MTCN(nn.Module):
 
 
 if __name__ == "__main__":
-    args = Args()
-    seed_everything(34)
-    x = torch.rand([16, 39, 313]).cuda()
-    model = Transformer_DeltaTIM(args).cuda()
-    y1 = model(x, index=0)
-    y2 = model(x, index=1)
-    print(torch.sum(torch.abs(y1 - y2)))
+    # args = Args()
+    # seed_everything(34)
+    # x = torch.rand([16, 39, 313]).cuda()
+    # model = Transformer_DeltaTIM(args).cuda()
+    # y1 = model(x, index=0)
+    # y2 = model(x, index=1)
+    # print(torch.sum(torch.abs(y1 - y2)))
+    arg = Args()
+    x = torch.randn([4, 39, 313])
+    model = AT_DIFF_Block(arg)
+    print(model(x).shape)
     pass

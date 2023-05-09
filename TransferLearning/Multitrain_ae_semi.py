@@ -117,8 +117,8 @@ class MultiTrainer:
 
     def get_loader(self, dataset_name, batch_size, split_rate):
         loader = []
-        train_loader, val_loader, test_loader = load_loader(dataset_name, split_rate, batch_size,
-                                                            self.random_seed, version='V1', order=3)
+        train_loader, val_loader, test_loader = load_loader(dataset_name, split_rate, batch_size, self.random_seed,
+                                                            version='V1', order=3)
         loader.append(train_loader)
         loader.append(val_loader)
         loader.append(test_loader)

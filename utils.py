@@ -126,7 +126,7 @@ def load_dataset(dataset_name, spilt_rate, random_seed, version='V2', order=3, i
     return datasets
 
 
-def load_loader(dataset_name, spilt_rate, batch_size, random_seed, version='V2', order=3):
+def load_loader(dataset_name, spilt_rate, batch_size, random_seed, version='V1', order=3):
     """
     加载数据加载器
     """
