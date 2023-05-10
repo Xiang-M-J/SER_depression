@@ -1,4 +1,4 @@
-# 在ddg_3的基础上删除了MModel上的prepare
+# 在ddg_4的基础上将普通的DANN换成了WGAN
 import copy
 import datetime
 import math

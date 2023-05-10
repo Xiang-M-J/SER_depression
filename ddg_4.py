@@ -26,6 +26,7 @@ seq_len = [313, 188]
 num_sample = [3549, 7200]
 split_rate = [0.6, 0.2, 0.2]
 dataset_num = len(dataset_name)
+mu = 0.2
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 use_amp = False
 if use_amp:
@@ -154,8 +155,8 @@ class DDGTrainer:
         args.num_class = num_class
         self.optimizer_type = args.optimizer_type
         self.epochs = args.epochs
-        self.inner_iter = 23
-        self.mmd_step = 3
+        self.inner_iter = 34
+        self.mmd_step = 6
         self.feature_dim = args.feature_dim
         self.batch_size = args.batch_size
         self.seq_len = args.seq_len
@@ -391,7 +392,7 @@ class DDGTrainer:
         val_num = len(self.loader[0][1].dataset)
         for epoch in range(self.epochs):
             model.train()
-            if epoch % self.mmd_step == 0:
+            if (epoch+1) % self.mmd_step == 0:
                 m_loss = []
                 for step in range(self.inner_iter):
                     train_batch = []
@@ -407,7 +408,7 @@ class DDGTrainer:
                     p = epoch / self.epochs
                     domain_loss, correct_num = self.get_domain_loss(model, hidden1, hidden2, discriminator,
                                                                     train_batch, p)
-                    loss = 0.7 * mmd_loss + 0.3 * domain_loss
+                    loss = (1-mu) * mmd_loss + mu * domain_loss
                     ddg_optimizer.zero_grad()
                     loss.backward()
                     ddg_optimizer.step()
@@ -462,8 +463,8 @@ class DDGTrainer:
             plt.title(f"train accuracy and validation accuracy")
             plt.pause(0.02)
             plt.ioff()  # 关闭画图的窗口
-            if early_stop(val_loss):
-                break
+            # if early_stop(val_loss):
+            #     break
             domain_acc = 0
             domain_num = 0
             val_acc = 0

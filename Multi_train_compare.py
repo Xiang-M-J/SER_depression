@@ -15,10 +15,10 @@ from model import AT_TAB, TAB_DIFF
 from utils import get_newest_file, load_loader, NoamScheduler, Metric, accuracy_cal
 
 # 联合训练
-dataset_name = ['MODMA', 'DAIC2']
-num_class = [2, 2]
+dataset_name = ['MODMA', 'CASIA']
+num_class = [2, 6]
 seq_len = [313, 188]
-num_sample = [3549, 24000]
+num_sample = [3549, 7200]
 split_rate = [0.6, 0.2, 0.2]
 dataset_num = len(dataset_name)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

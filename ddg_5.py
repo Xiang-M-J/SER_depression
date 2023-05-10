@@ -103,7 +103,7 @@ class BaseModel(nn.Module):
         alpha = 2. / (1 + np.exp((-10. * p))) - 1
         x = GRL.apply(x, alpha)
         domain_loss, correct_num_domain = discriminator(x, label.to(device))
-        loss = mmd_loss + 0.1 * domain_loss
+        loss = 0.8 * mmd_loss + 0.2 * domain_loss
         return loss, correct_num_domain
 
     def forward(self, x, y, index=0, mask=None):
