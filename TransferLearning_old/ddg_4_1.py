@@ -1,4 +1,4 @@
-# 在ddg_3的基础上删除了MModel上的prepare
+# 加上prepare的效果确实不好
 import copy
 import datetime
 import math
@@ -90,6 +90,11 @@ class MModel(nn.Module):
         if seq_len is not None:
             arg.seq_len = seq_len
         arg.dilation = num_layers[0] + num_layers[1]
+        self.prepare = nn.Sequential(
+            nn.Conv1d(in_channels=arg.feature_dim, out_channels=arg.filters, kernel_size=1, padding=0),
+            nn.BatchNorm1d(arg.filters),
+            nn.ReLU(),
+        )
         self.shareNet = AT_TAB(arg, num_layers, index=0)
         merge = nn.Sequential(
             nn.Linear(arg.dilation, 1),
@@ -102,21 +107,21 @@ class MModel(nn.Module):
         )
 
     def get_generalFeature(self, x):
-        x_f = x
-        x_b = torch.flip(x, dims=[-1])
+        x_f = self.prepare(x)
+        x_b = self.prepare(torch.flip(x, dims=[-1]))
         _, x_f, _ = self.shareNet(x_f, x_b)
         return x_f
 
     def get_mmd_feature(self, x):
-        x_f = x
-        x_b = torch.flip(x, dims=[-1])
+        x_f = self.prepare(x)
+        x_b = self.prepare(torch.flip(x, dims=[-1]))
         _, x_f, _ = self.shareNet(x_f, x_b)
         _, x_f = self.specialNet[0](x_f)
         return x_f
 
     def forward(self, x, y):
-        x_f = x
-        x_b = torch.flip(x, dims=[-1])
+        x_f = self.prepare(x)
+        x_b = self.prepare(torch.flip(x, dims=[-1]))
         x_1, x_f, _ = self.shareNet(x_f, x_b)
         x_2, x_f = self.specialNet[0](x_f)
         x = self.specialNet[1](torch.cat([x_1, x_2], dim=-1))
@@ -156,18 +161,18 @@ class DDGTrainer:
         self.optimizer_type = args.optimizer_type
         self.epochs = args.epochs
         self.inner_iter = 30    # 23 ?
-        self.mmd_step = 3   # 3 ?
+        self.mmd_step = 6   # 3 ?
         self.feature_dim = args.feature_dim
         self.batch_size = args.batch_size
         self.seq_len = args.seq_len
         self.lr = args.lr
         self.weight_decay = args.weight_decay
-        self.best_path = "models/ddg/MODMA_best.pt"
-        self.model_path = "models/ddg/MODMA.pt"
+        self.best_path = "../models/ddg/MODMA_best.pt"
+        self.model_path = "../models/ddg/MODMA.pt"
         self.pretrain_path = f"models/ddg/pretrain_{dataset_name[1]}_2.pt"
         self.pretrain_best_path = f"models/ddg/pretrain_{dataset_name[1]}_best_2.pt"
-        self.result_train_path = "results/data/ddg/train.npy"
-        self.result_test_path = "results/data/ddg/test.npy"
+        self.result_train_path = "../results/data/ddg/train.npy"
+        self.result_test_path = "../results/data/ddg/test.npy"
         date = datetime.datetime.now().strftime("%d_%H_%M")
         tmp_path = f"models/ddg/ddg_4_{date}"
         if not os.path.exists(tmp_path):
@@ -267,97 +272,6 @@ class DDGTrainer:
     def test_step(self, model, batch):
         return self.val_step(model, batch)
 
-    def pretrain(self):
-        arg = Args()
-        arg.num_class = num_class
-        arg.epochs = 60
-        arg.step_size = 10
-        arg.gamma = 0.3
-        model = MModel(arg, index=1)
-        model = model.to(device)
-        lr = 2e-4
-
-        optimizer = self.get_optimizer(arg, model.parameters(), lr)
-        scheduler = self.get_scheduler(optimizer, arg)
-        train_num = len(self.loader[1][0].dataset)
-        val_num = len(self.loader[1][1].dataset)
-        best_val_accuracy = 0
-        metric = Metric()
-        earlystop = EarlyStopping(patience=5)
-        for epoch in range(self.epochs):
-            model.train()
-            train_acc = 0
-            train_loss = 0
-            for batch in self.loader[1][0]:
-                loss, correct_num = self.train_step(model, optimizer, batch)
-                train_acc += correct_num.cpu().numpy()
-                train_loss += loss.data.item()
-            train_acc /= train_num
-            train_loss /= math.ceil(train_num / self.batch_size)
-            metric.train_acc.append(train_acc)
-            metric.train_loss.append(train_loss)
-            print(f"epoch {epoch + 1}: train_acc: {train_acc * 100:.3f}\t train_loss: {train_loss:.4f}")
-
-            model.eval()
-            val_acc = 0
-            val_loss = 0
-
-            with torch.no_grad():
-                for batch in self.loader[1][1]:
-                    loss, correct_num = self.val_step(model, batch)
-                    val_acc += correct_num.cpu().numpy()
-                    val_loss += loss.data.item()
-            val_acc /= val_num
-            val_loss /= math.ceil(val_num / self.batch_size)
-            metric.val_acc.append(val_acc)
-            metric.val_loss.append(val_loss)
-            print(f"epoch {epoch + 1}: val_acc: {val_acc * 100:.3f}\t val_loss: {val_loss:.4f}")
-            scheduler.step()
-
-            if val_acc > best_val_accuracy:
-                print(f"val_accuracy improved from {best_val_accuracy} to {val_acc}")
-                best_val_accuracy = val_acc
-                metric.best_val_acc = [best_val_accuracy, train_acc]
-                torch.save(model, self.pretrain_best_path)
-                print(f"saving model to {self.pretrain_best_path}")
-            elif val_acc == best_val_accuracy:
-                if train_acc > metric.best_val_acc[1]:
-                    metric.best_val_acc[1] = train_acc
-                    print("update train accuracy")
-            else:
-                print(f"val_accuracy did not improve from {best_val_accuracy}")
-            plt.clf()
-            plt.plot(metric.train_acc)
-            plt.plot(metric.val_acc)
-            plt.ylabel("accuracy(%)")
-            plt.xlabel("epoch")
-            plt.title(f"train accuracy and validation accuracy")
-            plt.pause(0.02)
-            plt.ioff()  # 关闭画图的窗口
-            if earlystop(val_acc):
-                break
-
-        torch.save(model, self.pretrain_path)
-        # model = torch.load(self.pretrain_path)
-        test_acc = 0
-        test_num = len(self.loader[1][2].dataset)
-        with torch.no_grad():
-            for batch in self.loader[1][2]:
-                loss, correct_num = self.test_step(model, batch)
-                test_acc += correct_num
-        print("final path")
-        test_acc = test_acc / test_num
-        print(f"test Accuracy:{test_acc * 100:.3f}\t")
-        model = torch.load(self.pretrain_best_path)
-        test_acc = 0
-        with torch.no_grad():
-            for batch in self.loader[1][2]:
-                loss, correct_num = self.test_step(model, batch)
-                test_acc += correct_num
-        print("best path")
-        test_acc = test_acc / test_num
-        print(f"test Accuracy:{test_acc * 100:.3f}\t")
-
     def train(self):
         mini_iter = min([len(self.loader[i][0]) for i in range(dataset_num)])
         train_iter = [iter(self.loader[i][0]) for i in range(dataset_num)]
@@ -372,12 +286,13 @@ class DDGTrainer:
         discriminator = Discriminator(arg).to(device)
         discriminator.train()
         parameter = [
+            {'params': model.prepare.parameters(), 'lr': arg.lr},
             {'params': model.shareNet.parameters(), 'lr': arg.lr},
             {'params': hidden1.parameters(), 'lr': arg.lr},
             {"params": hidden2.parameters(), 'lr': arg.lr},
             {"params": discriminator.parameters(), 'lr': arg.lr}
         ]
-        ddg_optimizer = torch.optim.SGD(parameter, lr=arg.lr)
+        ddg_optimizer = torch.optim.SGD(parameter, lr=arg.lr, weight_decay=0.1)
         ddg_scheduler = torch.optim.lr_scheduler.StepLR(ddg_optimizer, step_size=30, gamma=0.3)
         early_stop = EarlyStoppingLoss(patience=5, delta_loss=6e-4)
         best_val_accuracy = 0
@@ -526,7 +441,6 @@ class DDGTrainer:
 
 if __name__ == "__main__":
     arg = Args()
-    arg.random_seed = 34
     trainer = DDGTrainer(arg)
     # trainer.pretrain()
     trainer.train()

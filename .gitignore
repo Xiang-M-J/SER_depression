@@ -12,9 +12,13 @@ meta
 old
 models
 runs
-ser_pretrain
 wandb
 *.pt
 .idea
 *.svg
 *.7z
+ser_pretrain/x
+ser_pretrain/y
+ser_pretrain/models
+ser_pretrain/predict
+ser_pretrain/results
