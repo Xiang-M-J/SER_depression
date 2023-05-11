@@ -1,3 +1,4 @@
+# 已经训练了12个epoch，后面可以降低学习率进行训练
 import math
 
 import numpy as np
