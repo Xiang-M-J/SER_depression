@@ -9,6 +9,7 @@ from attention import MultiHeadAttention, AFTLocalAttention, get_attention, AFTS
 from Transformer import feedForward
 
 from config import Args
+from TAB_Components import TAB, TAB_DIFF, TAB_ADD, TAB_Conv, TAB_AT, TAB_BiDIFF, AT_TAB
 from utils import seed_everything, mask_input
 
 
@@ -226,336 +227,11 @@ class AT_DeltaTIM(nn.Module):
         return x
 
 
-class TAB_Attention_SE(nn.Module):
-    """
-    SE
-    """
-
-    def __init__(self, args: Args):
-        super(TAB_Attention_SE, self).__init__()
-        self.pool1 = nn.AdaptiveAvgPool1d(1)  # N C L -> N C 1
-        self.pool2 = nn.AdaptiveMaxPool1d(1)
-        self.channel = nn.Sequential(
-            nn.Conv1d(in_channels=128, out_channels=16, kernel_size=1),
-            # nn.BatchNorm1d(args.filters),
-            nn.ReLU(),
-            nn.Conv1d(in_channels=16, out_channels=128, kernel_size=1),
-            # nn.BatchNorm1d(args.filters),
-            nn.Sigmoid(),
-        )
-        # self.spatial = nn.Sequential(
-        #     nn.Conv1d(2, 1, kernel_size=1),
-        #     nn.Sigmoid()
-        # )
-
-    def forward(self, x, mask=None):
-        attn1 = self.pool1(x)
-        attn2 = self.pool2(x)
-        attn = self.channel(attn1 + attn2)
-        x = x * attn
-        # x_compress = torch.cat([torch.max(x, 1)[0].unsqueeze(1), torch.mean(x, 1).unsqueeze(1)], dim=1)
-        # attn = self.spatial(x_compress)
-        # x = x * attn
-        return x
-
-
-class TAB_Attention_MH(nn.Module):
-    """
-    MH
-    """
-
-    def __init__(self, args: Args):
-        super(TAB_Attention_MH, self).__init__()
-        self.in_proj = nn.Sequential(
-            Rearrange("N C L -> N L C")
-        )
-        # self.attn = TransformerEncoderLayer(128, 4, 1024, 0.1, batch_first=True)
-        self.attn = MultiHeadAttention(128, 4, 32, 32, 32)
-        # self.attn = MultiHeadAttention(39, 3, 13, 13, 13)
-        # self.ff = feedForward(256, 1024)
-        self.out_proj = nn.Sequential(
-            Rearrange("N L C -> N C L"),
-        )
-
-    def forward(self, x, mask=None):
-        x = self.in_proj(x)
-        if mask is not None:
-            x, _ = self.attn(x, x, x, mask)
-        else:
-            x, _ = self.attn(x, x, x, mask)
-        return self.out_proj(x)
-
-
-class TAB_Attention_AF(nn.Module):
-    """
-    AFT_Local
-    """
-
-    def __init__(self, args: Args):
-        super(TAB_Attention_AF, self).__init__()
-        self.in_proj = nn.Sequential(
-            Rearrange("N C L -> N L C")
-        )
-        self.attn = AFTLocalAttention(128, args.seq_len, 64)
-        self.ff = feedForward(128, 1024)
-        self.out_proj = nn.Sequential(
-            Rearrange("N L C -> N C L")
-        )
-
-    def forward(self, x, mask=None):
-        x = self.in_proj(x)
-        x, attn = self.attn(x, x, x, mask)
-        # x = self.ff(x)
-        return self.out_proj(x)
-
-
-class TAB_Attention_AFS(nn.Module):
-    """
-    AFT_Simple
-    """
-
-    def __init__(self, args: Args):
-        super(TAB_Attention_AFS, self).__init__()
-        self.in_proj = nn.Sequential(
-            Rearrange("N C L -> N L C")
-        )
-        self.attn = AFTSimpleAttention(128)  # AFTLocal的效果更好
-        self.ff = feedForward(128, 1024)
-        self.out_proj = nn.Sequential(
-            Rearrange("N L C -> N C L")
-        )
-
-    def forward(self, x, mask=None):
-        x = self.in_proj(x)
-        x, attn = self.attn(x, x, x, mask)
-        # x = self.ff(x)
-        return self.out_proj(x)
-
-
-# 各种TAB组件
-class TAB(nn.Module):
-    def __init__(self, args: Args, num_layer, index):
-        super(TAB, self).__init__()
-        self.net = nn.ModuleList([])
-        layer_begin = 0 if index == 0 else num_layer[0]
-        layer_end = num_layer[0] if index == 0 else sum(num_layer)
-        for i in [2 ** i for i in range(layer_begin, layer_end)]:
-            self.net.append(
-                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-
-    def forward(self, x):
-        stack_layer = []
-        for layer in self.net:
-            x = layer(x)
-            stack_layer.append(x)
-        stack_layer = torch.stack(stack_layer, dim=-1)
-        return stack_layer
-
-
-class TAB_ADD(nn.Module):
-    def __init__(self, args: Args, num_layer, index):
-        super(TAB_ADD, self).__init__()
-        self.net = nn.ModuleList([])
-        layer_begin = 0 if index == 0 else num_layer[0]
-        layer_end = num_layer[0] if index == 0 else sum(num_layer)
-        for i in [2 ** i for i in range(layer_begin, layer_end)]:
-            self.net.append(
-                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-
-    def forward(self, x_f, x_b):
-        stack_layer = []
-        for layer in self.net:
-            x_f = layer(x_f)
-            x_b = layer(x_b)
-            tmp = torch.add(x_f, x_b)
-            stack_layer.append(tmp)
-        stack_layer = torch.stack(stack_layer, dim=-1)
-        return stack_layer, x_f, x_b
-
-
-class TAB_AT(nn.Module):
-    """
-    对双向相加后的数据进行attn
-    """
-
-    def __init__(self, args: Args, num_layer, index):
-        super(TAB_AT, self).__init__()
-        self.in_proj = nn.Sequential(
-            nn.Conv1d(args.filters, 128, kernel_size=1),
-            nn.BatchNorm1d(128),
-            # nn.ReLU(),
-        )
-        self.net = nn.ModuleList([])
-        self.attn = TAB_Attention_MH(args)
-        layer_begin = 0 if index == 0 else num_layer[0]
-        layer_end = num_layer[0] if index == 0 else sum(num_layer)
-        for i in [2 ** i for i in range(layer_begin, layer_end)]:
-            self.net.append(
-                Temporal_Aware_Block(feature_dim=128, filters=128, kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-        self.out_proj1 = nn.Sequential(
-            nn.Conv1d(128, args.filters, kernel_size=1),
-            nn.BatchNorm1d(args.filters),
-            # nn.ReLU()
-        )
-        self.out_proj2 = nn.Sequential(
-            nn.Conv2d(128, args.filters, kernel_size=1),
-            nn.BatchNorm2d(args.filters),
-            # nn.ReLU()
-        )
-
-    def forward(self, x_f, x_b, mask=None):
-        stack_layer = []
-        x_f = self.in_proj(x_f)
-        x_b = self.in_proj(x_b)
-        for layer in self.net:
-            x_f = layer(x_f)
-            x_b = layer(x_b)
-            tmp = x_f + x_b
-            tmp = self.attn(tmp, mask)
-            stack_layer.append(tmp)
-        stack_layer = torch.stack(stack_layer, dim=-1)
-
-        return self.out_proj2(stack_layer), self.out_proj1(x_f), x_b
-
-
-class TAB_Conv(nn.Module):
-    def __init__(self, args: Args, num_layer, index):
-        super(TAB_Conv, self).__init__()
-        self.net = nn.ModuleList([])
-        self.fusion = nn.ModuleList([])
-        layer_begin = 0 if index == 0 else num_layer[0]
-        layer_end = num_layer[0] if index == 0 else sum(num_layer)
-        for i in [2 ** i for i in range(layer_begin, layer_end)]:
-            self.fusion.append(
-                nn.Sequential(
-                    nn.Conv1d(in_channels=2 * args.filters, out_channels=args.filters, kernel_size=1, padding="same"),
-                    nn.BatchNorm1d(args.filters),
-                    nn.ReLU(),
-                )
-            )
-            self.net.append(
-                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-
-    def forward(self, x_f, x_b):
-        stack_layer = []
-        for i, layer in enumerate(self.net):
-            x_f = layer(x_f)
-            x_b = layer(x_b)
-            tmp = self.fusion[i](torch.cat([x_f, x_b], dim=1))
-            stack_layer.append(tmp)
-        stack_layer = torch.stack(stack_layer, dim=-1)
-        return stack_layer, x_f, x_b
-
-
-class TAB_BiDIFF(nn.Module):
-    def __init__(self, args: Args, num_layer, index):
-        super(TAB_BiDIFF, self).__init__()
-        self.net = nn.ModuleList([])
-        layer_begin = 0 if index == 0 else num_layer[0]
-        layer_end = num_layer[0] if index == 0 else sum(num_layer)
-        for i in [2 ** i for i in range(layer_begin, layer_end)]:
-            self.net.append(
-                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters, kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-
-    def forward(self, x_f, x_b):
-        stack_layer = []
-        last_x_f = None
-        last_x_b = None
-        for layer in self.net:
-            x_f = layer(x_f)
-            x_b = layer(x_b)
-            if last_x_f is not None:
-                stack_layer.append(torch.add(x_f - last_x_f, x_b - last_x_b))
-            last_x_f = x_f
-            last_x_b = x_b
-
-        stack_layer.append(x_f + x_b)
-        stack_layer = torch.stack(stack_layer, dim=-1)
-
-        return stack_layer, x_f, x_b
-
-
-class AT_TAB(nn.Module):
-    """
-    对单向进行attn
-    """
-
-    def __init__(self, args: Args, num_layer, index):
-        super(AT_TAB, self).__init__()
-        self.in_proj = nn.Sequential(
-            nn.Conv1d(args.filters, 128, kernel_size=1),
-            nn.BatchNorm1d(128),
-            # nn.ReLU(),
-        )
-
-        self.net = nn.ModuleList([])
-        self.attn = TAB_Attention_MH(args)
-        layer_begin = 0 if index == 0 else num_layer[0]
-        layer_end = num_layer[0] if index == 0 else sum(num_layer)
-        for i in [2 ** i for i in range(layer_begin, layer_end)]:
-            self.net.append(
-                Temporal_Aware_Block(feature_dim=128, filters=128, kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-        self.out_proj1 = nn.Sequential(
-            nn.Conv1d(128, args.filters, kernel_size=1),
-            nn.BatchNorm1d(args.filters),
-            # nn.ReLU(),
-        )
-        self.out_proj2 = nn.Sequential(
-            nn.Conv2d(128, args.filters, kernel_size=1),
-            nn.BatchNorm2d(args.filters),
-            # nn.ReLU()
-        )
-
-    def forward(self, x_f, x_b, mask=None):
-        stack_layer = []
-        x_f = self.in_proj(x_f)
-        for layer in self.net:
-            x_f = layer(x_f)
-            x_f = self.attn(x_f, mask)
-            stack_layer.append(x_f)
-        stack_layer = torch.stack(stack_layer, dim=-1)
-        return self.out_proj2(stack_layer), self.out_proj1(x_f), x_b
-
-
-class TAB_DIFF(nn.Module):
-    def __init__(self, args: Args, num_layer, index):
-        super(TAB_DIFF, self).__init__()
-        self.net = nn.ModuleList([])
-        layer_begin = 0 if index == 0 else num_layer[0]
-        layer_end = num_layer[0] if index == 0 else sum(num_layer)
-        for i in [2 ** i for i in range(layer_begin, layer_end)]:
-            self.net.append(
-                Temporal_Aware_Block(feature_dim=args.filters, filters=args.filters,
-                                     kernel_size=args.kernel_size,
-                                     dilation=i, dropout=args.drop_rate)
-            )
-
-    def forward(self, x):
-        stack_layer = []
-        last_x = None
-        for layer in self.net:
-            x = layer(x)
-            if last_x is not None:
-                stack_layer.append(x - last_x)
-            last_x = x
-        stack_layer.append(x)
-        stack_layer = torch.stack(stack_layer, dim=-1)
-        return stack_layer, x
-
-
 class AT_DIFF_Block(nn.Module):
+    """
+    AT + DIFF
+    """
+
     def __init__(self, arg: Args, num_layers=None, is_prepare=False):
         super(AT_DIFF_Block, self).__init__()
         if num_layers is None:
@@ -576,14 +252,120 @@ class AT_DIFF_Block(nn.Module):
             nn.BatchNorm1d(arg.filters),
         )
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         if self.is_prepare:
             x_f = self.prepare(x)
             x_b = self.prepare(torch.flip(x, dims=[-1]))
         else:
             x_f = x
             x_b = torch.flip(x, dims=[-1])
-        x_1, x_f, _ = self.block1(x_f, x_b)
+        x_1, x_f, _ = self.block1(x_f, x_b, mask)
+        x_2, x_f = self.block2(x_f)
+        x = self.merge(torch.cat([x_1, x_2], dim=-1))
+        return x
+
+
+class vanilla_Block(nn.Module):
+    def __init__(self, arg: Args, num_layers=None, is_prepare=False):
+        super(vanilla_Block, self).__init__()
+        if num_layers is None:
+            num_layers = [3, 5]
+        self.is_prepare = is_prepare
+        if is_prepare:
+            self.prepare = nn.Sequential(
+                nn.Conv1d(in_channels=arg.feature_dim, out_channels=arg.filters, kernel_size=1, padding=0),
+                nn.BatchNorm1d(arg.filters),
+                nn.ReLU(),
+            )
+        self.block1 = TAB(arg, num_layers, 0)
+        self.block2 = TAB(arg, num_layers, 1)
+        arg.dilation = num_layers[0] + num_layers[1]
+        self.merge = nn.Sequential(
+            nn.Linear(arg.dilation, 1),
+            Rearrange("N C L H -> N C (L H)"),
+            nn.BatchNorm1d(arg.filters),
+        )
+
+    def forward(self, x, mask=None):
+        if self.is_prepare:
+            x_f = self.prepare(x)
+        else:
+            x_f = x
+        x_1, x_f = self.block1(x_f)
+        x_2, x_f = self.block2(x_f)
+        x = self.merge(torch.cat([x_1, x_2], dim=-1))
+        return x
+
+
+class vanilla_DIFF_Block(nn.Module):
+    """
+    Vanilla + DIFF
+    """
+
+    def __init__(self, arg: Args, num_layers=None, is_prepare=False):
+        super(vanilla_DIFF_Block, self).__init__()
+        if num_layers is None:
+            num_layers = [3, 5]
+        self.is_prepare = is_prepare
+        if is_prepare:
+            self.prepare = nn.Sequential(
+                nn.Conv1d(in_channels=arg.feature_dim, out_channels=arg.filters, kernel_size=1, padding=0),
+                nn.BatchNorm1d(arg.filters),
+                nn.ReLU(),
+            )
+        self.block1 = TAB(arg, num_layers, 0)
+        self.block2 = TAB_DIFF(arg, num_layers, 1)
+        arg.dilation = num_layers[0] + num_layers[1]
+        self.merge = nn.Sequential(
+            nn.Linear(arg.dilation, 1),
+            Rearrange("N C L H -> N C (L H)"),
+            nn.BatchNorm1d(arg.filters),
+        )
+
+    def forward(self, x, mask=None):
+        if self.is_prepare:
+            x_f = self.prepare(x)
+        else:
+            x_f = x
+        x_1, x_f = self.block1(x_f)
+        x_2, x_f = self.block2(x_f)
+        x = self.merge(torch.cat([x_1, x_2], dim=-1))
+        return x
+
+
+class AT_vanilla_Block(nn.Module):
+    """
+    AT + Vanilla
+    """
+
+    def __init__(self, arg: Args, num_layers=None, is_prepare=False):
+        super(AT_vanilla_Block, self).__init__()
+        if num_layers is None:
+            num_layers = [3, 5]
+        self.is_prepare = is_prepare
+        if is_prepare:
+            self.prepare = nn.Sequential(
+                nn.Conv1d(in_channels=arg.feature_dim, out_channels=arg.filters, kernel_size=1, padding=0),
+                nn.BatchNorm1d(arg.filters),
+                nn.ReLU(),
+            )
+        self.block1 = AT_TAB(arg, num_layers, 0)
+        self.block2 = TAB(arg, num_layers, 1)
+        arg.dilation = num_layers[0] + num_layers[1]
+        self.merge = nn.Sequential(
+            nn.Linear(arg.dilation, 1),
+            Rearrange("N C L H -> N C (L H)"),
+            nn.BatchNorm1d(arg.filters),
+        )
+
+    def forward(self, x, mask=None):
+        if self.is_prepare:
+            x_f = self.prepare(x)
+            x_b = self.prepare(torch.flip(x, dims=[-1]))
+        else:
+            x_f = x
+            x_b = torch.flip(x, dims=[-1])
+        x_1, x_f, _ = self.block1(x_f, x_b, mask)
         x_2, x_f = self.block2(x_f)
         x = self.merge(torch.cat([x_1, x_2], dim=-1))
         return x
@@ -603,14 +385,6 @@ class MTCN(nn.Module):
         self.name = "MTCN"
         if num_layers is None:
             num_layers = [3, 5]
-        self.prepare = nn.Sequential(
-            nn.Conv1d(in_channels=args.feature_dim, out_channels=args.filters, kernel_size=1, dilation=1, padding=0),
-            nn.BatchNorm1d(args.filters),
-            nn.ReLU(),
-        )
-        self.generalExtractor = AT_TAB(args, num_layer=num_layers, index=0)
-        self.specialExtractor = TAB_DIFF(args, num_layer=num_layers, index=1)
-        args.dilation = num_layers[0] + num_layers[1]
         # 多层特征融合
         # nn.Conv2d
         # self.merge = nn.Sequential(
@@ -627,21 +401,16 @@ class MTCN(nn.Module):
         #     Rearrange("N (C L) H -> N C L H", C=args.filters)
         # )
         # Linear
-        self.merge = nn.Sequential(
-            # 加上BatchNorm和Dropout后容易验证集虚高
-            nn.Linear(args.dilation, 1),
-            Rearrange("N C L H -> N C (L H)"),
-            nn.BatchNorm1d(args.filters),
-            # nn.ReLU(),
-            # nn.Dropout(0.3)
-        )
-        # self.classifier = nn.Sequential(
-        #     Rearrange('N L C  -> N C L'),
-        #     nn.AdaptiveAvgPool1d(1),
-        #     Rearrange('N C L -> N (C L)'),
-        #     nn.Linear(in_features=args.filters * args.dilation, out_features=args.filters),
-        #     nn.Linear(in_features=args.filters, out_features=args.num_class)
+        # self.merge = nn.Sequential(
+        #     # 加上BatchNorm和Dropout后容易验证集虚高
+        #     nn.Linear(args.dilation, 1),
+        #     Rearrange("N C L H -> N C (L H)"),
+        #     nn.BatchNorm1d(args.filters),
+        #     # nn.ReLU(),
+        #     # nn.Dropout(0.3)
         # )
+
+        self.block = AT_DIFF_Block(args, num_layers, True)
         self.classifier = nn.Sequential(
             nn.AdaptiveAvgPool1d(1),
             # nn.Linear(args.seq_len, 1),
@@ -663,12 +432,12 @@ class MTCN(nn.Module):
         # x_2, x = self.specialExtractor(x)
 
         # for AT_DIFF
-        x_f = self.prepare(x)
-        x_b = self.prepare(torch.flip(x, dims=[-1]))
-        # x_f = x
-        # x_b = torch.flip(x, dims=[-1])
-        x_1, x, _ = self.generalExtractor(x_f, x_b, mask)
-        x_2, x = self.specialExtractor(x)
+        # x_f = self.prepare(x)
+        # x_b = self.prepare(torch.flip(x, dims=[-1]))
+        # # x_f = x
+        # # x_b = torch.flip(x, dims=[-1])
+        # x_1, x, _ = self.generalExtractor(x_f, x_b, mask)
+        # x_2, x = self.specialExtractor(x)
 
         # for ADD_BiDIFF ADD_ADD, ADD_Conv, ADD_AT
         # x_f = self.prepare(x)
@@ -676,8 +445,9 @@ class MTCN(nn.Module):
         # x_1, x_f, x_b = self.generalExtractor(x_f, x_b)
         # x_2, _, _ = self.specialExtractor(x_f, x_b)
 
-        x = self.merge(torch.cat([x_1, x_2], dim=-1))
+        # x = self.merge(torch.cat([x_1, x_2], dim=-1))
         # x = torch.mean(torch.cat([x_1, x_2], dim=-1), dim=-1, keepdim=True)   # 另一种平均池化的方法
+        x = self.block(x, mask)
         x = self.classifier(x)
         return x
 
@@ -690,8 +460,8 @@ if __name__ == "__main__":
     # y1 = model(x, index=0)
     # y2 = model(x, index=1)
     # print(torch.sum(torch.abs(y1 - y2)))
-    arg = Args()
-    x = torch.randn([4, 39, 313])
-    model = AT_DIFF_Block(arg)
-    print(model(x).shape)
+    # arg = Args()
+    # x = torch.randn([4, 39, 313])
+    # model = AT_DIFF_Block(arg)
+    # print(model(x).shape)
     pass

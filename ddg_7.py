@@ -140,7 +140,7 @@ class Discriminator(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(1000, 1),
-            nn.Sigmoid()
+            # nn.Sigmoid()
         )
 
     def forward(self, x):
@@ -413,8 +413,8 @@ class DDGTrainer:
             plt.title(f"train accuracy and validation accuracy")
             plt.pause(0.02)
             plt.ioff()  # 关闭画图的窗口
-            if early_stop(val_loss):
-                break
+            # if early_stop(val_loss):
+            #     break
             domain_acc = 0
             domain_num = 0
             val_acc = 0

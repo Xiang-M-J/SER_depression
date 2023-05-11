@@ -155,8 +155,8 @@ class DDGTrainer:
         args.num_class = num_class
         self.optimizer_type = args.optimizer_type
         self.epochs = args.epochs
-        self.inner_iter = 34
-        self.mmd_step = 6
+        self.inner_iter = 30    # 23 ?
+        self.mmd_step = 6   # 3 ?
         self.feature_dim = args.feature_dim
         self.batch_size = args.batch_size
         self.seq_len = args.seq_len
