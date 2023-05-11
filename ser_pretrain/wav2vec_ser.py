@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.cuda.amp import GradScaler
-from transformers import Wav2Vec2PreTrainedModel, Wav2Vec2Model, AutoConfig, Wav2Vec2Config
+from transformers import Wav2Vec2PreTrainedModel, Wav2Vec2Model, AutoConfig
 
 from data_module import PretrainDataModule
 from pretrain_utils import train_step, val_step
