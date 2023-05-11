@@ -4,13 +4,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.cuda.amp import GradScaler
-from transformers import Wav2Vec2PreTrainedModel, Wav2Vec2Model, AutoConfig, Wav2Vec2Config
+from transformers import Wav2Vec2PreTrainedModel, Wav2Vec2Model, AutoConfig, Wav2Vec2Config, Wav2Vec2ForCTC
 
 from data_module import PretrainDataModule
-from pretrain_utils import train_step, val_step
+from pretrain_utils import train_step, val_step, test_step
 from utils import Metric
 
-model_name_or_path = "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition"
+model_name_or_path = "jonatasgrosman/wav2vec2-large-xlsr-53-chinese-zh-cn"
 num_class = 6
 epochs = 100
 pooling_mode = 'mean'
@@ -66,8 +66,8 @@ class Wav2Vec2ForSpeechClassification(Wav2Vec2PreTrainedModel):
         self.num_class = config.num_class
         self.pooling_mode = config.pooling_mode
         self.config = config
-        configuration = Wav2Vec2Config()
-        self.wav2vec2 = Wav2Vec2Model(configuration)
+        # configuration = Wav2Vec2Config()
+        self.wav2vec2 = Wav2Vec2Model(self.config)
         self.classifier = Wav2Vec2ClassificationHead(config)
 
         self.init_weights()
@@ -106,10 +106,9 @@ model.gradient_checkpointing_enable()
 parameter = []
 for name, param in model.named_parameters():  # 仅训练classifier.dense和classifier.out_proj
     if "wav2vec" in name:
-        param.requires_grad = False
+        parameter.append({'params': param, 'lr': 0.2*lr})
     else:
-        parameter.append({'params':param, "lr": lr})
-
+        parameter.append({'params': param, "lr": lr})
 
 optimizer = torch.optim.AdamW(parameter, lr=lr, betas=(beta1, beta2), weight_decay=0.2)
 if use_amp:
@@ -153,11 +152,17 @@ for epoch in range(epochs):
         metric.best_val_acc[0] = best_val_accuracy
         metric.best_val_acc[1] = train_acc
         print(f"best val accuracy: {best_val_accuracy}")
-np.save("results/wav2vec2_casia.npy", metric.item())
-torch.save(model, "./models/wav2vec2_ser_casia_final.pt")
+    np.save("results/wav2vec2_casia.npy", metric.item())
+    torch.save(model, "./models/wav2vec2_ser_casia_final.pt")
 
 test_acc = 0
 test_loss = []
 with torch.no_grad():
     for step, (vx, vy) in enumerate(test_loader):
-        correct_num, loss_v = 1, 1
+        correct_num, loss_v = val_step(model, vx, vy, use_amp)
+        test_acc += correct_num.cpu().numpy()
+        test_loss.append(loss_v)
+test_acc = test_acc / test_num
+test_loss = np.mean(test_loss)
+print("test accuracy: ", test_acc)
+print("test loss: ", test_loss)

@@ -17,7 +17,7 @@ class myWavLoader(dataset.Dataset):
         self.files = files
         self.labels = labels
         self.duration = duration
-        self.processor = Wav2Vec2Processor.from_pretrained(name)
+        # self.processor = Wav2Vec2Processor.from_pretrained(name)
 
     def __getitem__(self, index):
         data, sr = torchaudio.load(self.files[index])
@@ -28,8 +28,8 @@ class myWavLoader(dataset.Dataset):
         # else:
         #     padding = torch.zeros([1, expect_length - data.shape[1]])
         #     data = torch.cat([data, padding], dim=1)
-        data = data.squeeze(0)
-        data = self.processor(data, return_tensors="pt", padding="longest", sampling_rate=sr).input_values
+        # data = data.squeeze(0)
+        # data = self.processor(data, return_tensors="pt", padding="longest", sampling_rate=sr).input_values
         return data.squeeze(0).float(), label.astype(np.float32)
 
     def get_seq_len(self):
