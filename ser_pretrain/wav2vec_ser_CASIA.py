@@ -36,11 +36,11 @@ class Wav2Vec2ClassificationHead(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        self.dropout = nn.Dropout(config.final_dropout)
+        # self.dropout = nn.Dropout(config.final_dropout)
+        self.dropout = nn.Dropout(0.1)
         self.out_proj = nn.Linear(config.hidden_size, config.num_class)
 
     def forward(self, x, **kwargs):
-        x = self.dropout(x)
         x = self.dense(x)
         x = torch.tanh(x)
         x = self.dropout(x)
@@ -174,7 +174,7 @@ def test(model_path:str, dataset):
 
 
 if __name__ == "__main__":
-    paths = ['models/wav2vec2_ser_casia_final_1.pt', 'models/wav2vec2_ser_casia_best_1.pt', "results/wav2vec2_casia.npy"]
+    paths = ['models/wav2vec2_ser_casia_final.pt', 'models/wav2vec2_ser_casia_best.pt', "results/wav2vec2_casia.npy"]
     dataset = PretrainDataModule(model_name_or_path, 6, "y/casia_y.npy", "x/CASIA/", duration=6)
     dataset.setup()
     train(dataset, paths)
