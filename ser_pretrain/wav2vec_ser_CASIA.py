@@ -153,6 +153,8 @@ def train(dataset, paths: list):
         scheduler.step()
         np.save(paths[2], metric.item())
         torch.save(model, paths[0])
+        state = {"optimizer": optimizer.state_dict(), "scheduler": scheduler.state_dict(), 'epoch': epoch}
+        torch.save(state, paths[3])
 
 
 def test(model_path:str, dataset):
@@ -174,7 +176,8 @@ def test(model_path:str, dataset):
 
 
 if __name__ == "__main__":
-    paths = ['models/wav2vec2_ser_casia_final.pt', 'models/wav2vec2_ser_casia_best.pt', "results/wav2vec2_casia.npy"]
+    paths = ['models/wav2vec2_ser_casia_final.pt', 'models/wav2vec2_ser_casia_best.pt',
+             "results/wav2vec2_casia.npy", "results/optim_casia.pth"]
     dataset = PretrainDataModule(model_name_or_path, 6, "y/casia_y.npy", "x/CASIA/", duration=6)
     dataset.setup()
     train(dataset, paths)

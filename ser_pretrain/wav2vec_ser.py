@@ -161,6 +161,8 @@ def train(dataset, paths: list):
         scheduler.step()
         np.save(paths[2], metric.item())
         torch.save(model, paths[0])
+        state = {"optimizer": optimizer.state_dict(), "scheduler": scheduler.state_dict(), 'epoch': epoch}
+        torch.save(state, paths[3])
 
 
 def test(model_path:str, dataset):
@@ -182,7 +184,8 @@ def test(model_path:str, dataset):
 
 
 if __name__ == "__main__":
-    paths = ['models/wav2vec2_ser_modma_final.pt', 'models/wav2vec2_ser_modma_best.pt', "results/wav2vec2_modma.npy"]
+    paths = ['models/wav2vec2_ser_modma_final.pt', 'models/wav2vec2_ser_modma_best.pt',
+             "results/wav2vec2_modma.npy", "results/optim_modma.pth"]
     dataset = PretrainDataModule(model_name_or_path, 2, "y/modma_y.npy", "x/MODMA/", duration=10)
     dataset.setup()
     train(dataset, paths)
