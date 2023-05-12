@@ -114,7 +114,7 @@ def train(dataset, paths: list):
             parameter.append({'params': param, "lr": lr})
 
     optimizer = torch.optim.AdamW(parameter, lr=lr, betas=(beta1, beta2), weight_decay=0.2)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.4)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.3)
     if use_amp:
         scaler = GradScaler()
     else:
