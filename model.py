@@ -227,9 +227,54 @@ class AT_DeltaTIM(nn.Module):
         return x
 
 
+def get_merge(merge_type, dilation, filters):
+    if merge_type == "linear":
+        # 线性映射
+        # 同时加上BatchNorm和Dropout后容易验证集虚高
+        merge = nn.Sequential(
+            nn.Linear(dilation, 1),
+            Rearrange("N C L H -> N C (L H)"),
+            nn.BatchNorm1d(filters),
+        )
+        return merge
+    elif merge_type == "Conv":
+        # 二维卷积
+        merge = nn.Sequential(
+            Rearrange("N C L H -> N H C L"),
+            nn.Conv2d(in_channels=dilation, out_channels=1, kernel_size=1),
+            nn.BatchNorm2d(1),
+            nn.Dropout(0.3),
+            Rearrange("N H C L -> N C L H")
+        )
+        return merge
+    elif merge_type == "Pool":
+        # 全局平均池化，可以直接torch.mean(torch.cat([x_1, x_2], dim=-1), dim=-1, keepdim=True)
+        merge = nn.Sequential(
+            Rearrange("N C L H -> N (C L) H"),
+            nn.AdaptiveAvgPool1d(1),
+            Rearrange("N (C L) H -> N C L H", C=filters)
+        )
+        return merge
+    else:
+        raise NotImplementedError
+
+
+def get_extractor(arg: Args, num_layers, is_prepare):
+    if arg.multi_type == "AT_DIFF":
+        return AT_DIFF_Block(arg, num_layers, is_prepare)
+    elif arg.multi_type == "AT_v":
+        return AT_vanilla_Block(arg, num_layers, is_prepare)
+    elif arg.multi_type == "v_DIFF":
+        return vanilla_DIFF_Block(arg, num_layers, is_prepare)
+    elif arg.multi_type == "v":
+        return vanilla_Block(arg, num_layers, is_prepare)
+    else:
+        raise NotImplementedError
+
+
 class AT_DIFF_Block(nn.Module):
     """
-    AT + DIFF
+    AT + DIFF (DIFF+AT不是一个好主意)
     """
 
     def __init__(self, arg: Args, num_layers=None, is_prepare=False):
@@ -246,11 +291,7 @@ class AT_DIFF_Block(nn.Module):
         self.general = AT_TAB(arg, num_layers, 0)
         self.special = TAB_DIFF(arg, num_layers, 1)
         arg.dilation = num_layers[0] + num_layers[1]
-        self.merge = nn.Sequential(
-            nn.Linear(arg.dilation, 1),
-            Rearrange("N C L H -> N C (L H)"),
-            nn.BatchNorm1d(arg.filters),
-        )
+        self.merge = get_merge(arg.merge_type, arg.dilation, arg.filters)
 
     def forward(self, x, mask=None):
         if self.is_prepare:
@@ -261,44 +302,6 @@ class AT_DIFF_Block(nn.Module):
             x_b = torch.flip(x, dims=[-1])
         x_1, x_f, _ = self.general(x_f, x_b, mask)
         x_2, x_f = self.special(x_f)
-        x = self.merge(torch.cat([x_1, x_2], dim=-1))
-        return x
-
-
-class DIFF_AT_Block(nn.Module):
-    """
-    DIFF + AT
-    """
-
-    def __init__(self, arg: Args, num_layers=None, is_prepare=False):
-        super(DIFF_AT_Block, self).__init__()
-        if num_layers is None:
-            num_layers = [3, 5]
-        self.is_prepare = is_prepare
-        if is_prepare:
-            self.prepare = nn.Sequential(
-                nn.Conv1d(in_channels=arg.feature_dim, out_channels=arg.filters, kernel_size=1, padding=0),
-                nn.BatchNorm1d(arg.filters),
-                nn.ReLU(),
-            )
-        self.general = TAB_DIFF(arg, num_layers, 0)
-        self.special = TAB_AT(arg, num_layers, 1)
-        arg.dilation = num_layers[0] + num_layers[1]
-        self.merge = nn.Sequential(
-            nn.Linear(arg.dilation, 1),
-            Rearrange("N C L H -> N C (L H)"),
-            nn.BatchNorm1d(arg.filters),
-        )
-
-    def forward(self, x, mask=None):
-        if self.is_prepare:
-            x_f = self.prepare(x)
-            x_b = self.prepare(torch.flip(x, dims=[-1]))
-        else:
-            x_f = x
-            x_b = torch.flip(x, dims=[-1])
-        x_1, x_f = self.general(x_f)
-        x_2, x_f, _ = self.special(x_f, x_b, mask)
         x = self.merge(torch.cat([x_1, x_2], dim=-1))
         return x
 
@@ -318,19 +321,15 @@ class vanilla_Block(nn.Module):
         self.general = TAB(arg, num_layers, 0)
         self.special = TAB(arg, num_layers, 1)
         arg.dilation = num_layers[0] + num_layers[1]
-        self.merge = nn.Sequential(
-            nn.Linear(arg.dilation, 1),
-            Rearrange("N C L H -> N C (L H)"),
-            nn.BatchNorm1d(arg.filters),
-        )
+        self.merge = get_merge(arg.merge_type, arg.dilation, arg.filters)
 
     def forward(self, x, mask=None):
         if self.is_prepare:
             x_f = self.prepare(x)
         else:
             x_f = x
-        x_1, x_f = self.block1(x_f)
-        x_2, x_f = self.block2(x_f)
+        x_1, x_f = self.general(x_f)
+        x_2, x_f = self.special(x_f)
         x = self.merge(torch.cat([x_1, x_2], dim=-1))
         return x
 
@@ -354,19 +353,15 @@ class vanilla_DIFF_Block(nn.Module):
         self.general = TAB(arg, num_layers, 0)
         self.special = TAB_DIFF(arg, num_layers, 1)
         arg.dilation = num_layers[0] + num_layers[1]
-        self.merge = nn.Sequential(
-            nn.Linear(arg.dilation, 1),
-            Rearrange("N C L H -> N C (L H)"),
-            nn.BatchNorm1d(arg.filters),
-        )
+        self.merge = get_merge(arg.merge_type, arg.dilation, arg.filters)
 
     def forward(self, x, mask=None):
         if self.is_prepare:
             x_f = self.prepare(x)
         else:
             x_f = x
-        x_1, x_f = self.block1(x_f)
-        x_2, x_f = self.block2(x_f)
+        x_1, x_f = self.general(x_f)
+        x_2, x_f = self.special(x_f)
         x = self.merge(torch.cat([x_1, x_2], dim=-1))
         return x
 
@@ -390,11 +385,7 @@ class AT_vanilla_Block(nn.Module):
         self.general = AT_TAB(arg, num_layers, 0)
         self.special = TAB(arg, num_layers, 1)
         arg.dilation = num_layers[0] + num_layers[1]
-        self.merge = nn.Sequential(
-            nn.Linear(arg.dilation, 1),
-            Rearrange("N C L H -> N C (L H)"),
-            nn.BatchNorm1d(arg.filters),
-        )
+        self.merge = get_merge(arg.merge_type, arg.dilation, arg.filters)
 
     def forward(self, x, mask=None):
         if self.is_prepare:
@@ -403,8 +394,8 @@ class AT_vanilla_Block(nn.Module):
         else:
             x_f = x
             x_b = torch.flip(x, dims=[-1])
-        x_1, x_f, _ = self.block1(x_f, x_b, mask)
-        x_2, x_f = self.block2(x_f)
+        x_1, x_f, _ = self.general(x_f, x_b, mask)
+        x_2, x_f = self.special(x_f)
         x = self.merge(torch.cat([x_1, x_2], dim=-1))
         return x
 
@@ -418,73 +409,23 @@ class MTCN(nn.Module):
     MTCN: 当generalExtractor和specialExtractor使用DAIC_V1预训练模型参数，只训练prepare attn classifier 测试集准确率 94.382%
     """
 
-    def __init__(self, args: Args, num_layers=None):
+    def __init__(self, arg: Args, num_layers=None):
         super(MTCN, self).__init__()
         self.name = "MTCN"
         if num_layers is None:
             num_layers = [3, 5]
-        # 多层特征融合
-        # nn.Conv2d
-        # self.merge = nn.Sequential(
-        #     Rearrange("N C L H -> N H C L"),
-        #     nn.Conv2d(in_channels=args.dilation, out_channels=1, kernel_size=1),
-        #     nn.BatchNorm2d(1),
-        #     nn.Dropout(0.3),
-        #     Rearrange("N H C L -> N C L H")
-        # )
-        # 全局平均池化，可以直接torch.mean(torch.cat([x_1, x_2], dim=-1), dim=-1, keepdim=True)
-        # self.merge = nn.Sequential(
-        #     Rearrange("N C L H -> N (C L) H"),
-        #     nn.AdaptiveAvgPool1d(1),
-        #     Rearrange("N (C L) H -> N C L H", C=args.filters)
-        # )
-        # Linear
-        # self.merge = nn.Sequential(
-        #     # 加上BatchNorm和Dropout后容易验证集虚高
-        #     nn.Linear(args.dilation, 1),
-        #     Rearrange("N C L H -> N C (L H)"),
-        #     nn.BatchNorm1d(args.filters),
-        #     # nn.ReLU(),
-        #     # nn.Dropout(0.3)
-        # )
-
-        self.extractor = AT_DIFF_Block(args, num_layers, True)
+        self.extractor = get_extractor(arg, num_layers, True)
         self.classifier = nn.Sequential(
             nn.AdaptiveAvgPool1d(1),
             # nn.Linear(args.seq_len, 1),
-            nn.Dropout(0.1),
+            # nn.Dropout(0.5),
             Rearrange('N C L -> N (C L)'),
-            nn.Linear(in_features=args.filters, out_features=args.num_class)
+            nn.Linear(in_features=arg.filters, out_features=256),
+            nn.Dropout(arg.drop_rate),
+            nn.Linear(in_features=256, out_features=arg.num_class)
         )
 
     def forward(self, x, mask=None):
-        # x_f = self.prepare(x)
-        # x_b = self.prepare(torch.flip(x, dims=[-1]))
-        # x_1, x_f, x_b = self.generalExtractor(x_f, x_b)
-        # x_2, _, _ = self.specialExtractor(x_f, x_b)
-
-        # for ADD_DIFF
-        # x_f = self.prepare(x)
-        # x_b = self.prepare(torch.flip(x, dims=[-1]))
-        # x_1, x, _ = self.generalExtractor(x_f, x_b)
-        # x_2, x = self.specialExtractor(x)
-
-        # for AT_DIFF
-        # x_f = self.prepare(x)
-        # x_b = self.prepare(torch.flip(x, dims=[-1]))
-        # # x_f = x
-        # # x_b = torch.flip(x, dims=[-1])
-        # x_1, x, _ = self.generalExtractor(x_f, x_b, mask)
-        # x_2, x = self.specialExtractor(x)
-
-        # for ADD_BiDIFF ADD_ADD, ADD_Conv, ADD_AT
-        # x_f = self.prepare(x)
-        # x_b = self.prepare(torch.flip(x, dims=[-1]))
-        # x_1, x_f, x_b = self.generalExtractor(x_f, x_b)
-        # x_2, _, _ = self.specialExtractor(x_f, x_b)
-
-        # x = self.merge(torch.cat([x_1, x_2], dim=-1))
-        # x = torch.mean(torch.cat([x_1, x_2], dim=-1), dim=-1, keepdim=True)   # 另一种平均池化的方法
         x = self.extractor(x, mask)
         x = self.classifier(x)
         return x

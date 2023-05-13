@@ -22,18 +22,17 @@ class Args:
                  spilt_rate=None,
                  weight_decay=0.2,
                  patience=10,
-                 attention_type='AF',
                  multi_type='ADD_DIFF',
-                 pretrain_model_path="iemocap_pretrain.pt",
+                 merge_type='linear',
+                 pretrain_model_path="",
                  optimizer_type=2,
                  beta1=0.93,
                  beta2=0.98,
                  random_seed=34,
-                 model_type="",
+                 model_type="MTCN",
                  data_type="mfcc",
                  dataset_name="MODMA",
                  save=True,
-                 augment=False,
                  scheduler_type=1,
                  gamma=0.3,
                  step_size=30,
@@ -41,12 +40,9 @@ class Args:
                  initial_lr=0.05,
                  order=3,
                  version='V1',
-                 filters=39,
                  kernel_size=2,
                  drop_rate=0.1,
                  dilation=8,
-                 is_cluster=False,
-                 is_mask=False,
                  d_model=256,
                  n_head=8,
                  n_layer=3,
@@ -64,14 +60,10 @@ class Args:
             random_seed: 随机数种子
             data_type: 数据类型
             save: 是否保存模型和结果
-            augment: 是否启用增强
             scheduler_type: scheduler类型 [0:None, 1:'LR', 2:'Noam', 3:'cosine']
             gamma: LR scheduler参数
             step_size: LR scheduler参数
             warmup: Warm scheduler参数
-            is_weight: 是否对不同dilation的层进行加权融合
-            attention_type: 注意力机制的形式 ['MH':多头注意力, 'AF': attention free ]
-
         """
         if spilt_rate is None:
             spilt_rate = [0.6, 0.2, 0.2]
@@ -91,26 +83,22 @@ class Args:
         self.model_type = model_type
         self.data_type = data_type
         self.save = save
-        self.augment = augment
         self.scheduler_type = scheduler_type
         self.warmup = warmup
         self.initial_lr = initial_lr
         self.load_weight = load_weight
-        self.is_cluster = is_cluster
         self.dataset_name = dataset_name
         self.order = order
         self.version = version
-        self.attention_type = attention_type
         self.multi_type = multi_type
+        self.merge_type = merge_type
         self.patience = patience
         # Transformer begin
-        self.is_mask = is_mask
         self.d_model = d_model
         self.n_head = n_head
         self.d_qkv = d_qkv
         self.d_ff = dim_feed_forward
         self.n_layer = n_layer
-
         # Transformer end
 
         # CasualConv begin
