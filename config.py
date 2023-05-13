@@ -40,7 +40,7 @@ class Args:
                  warmup=400,
                  initial_lr=0.05,
                  order=3,
-                 version='V2',
+                 version='V1',
                  filters=39,
                  kernel_size=2,
                  drop_rate=0.1,
@@ -74,7 +74,7 @@ class Args:
 
         """
         if spilt_rate is None:
-            spilt_rate = [0.8, 0.1, 0.1]
+            spilt_rate = [0.6, 0.2, 0.2]
         self.model_name = " "
         self.epochs = epochs
         self.lr = lr

@@ -16232,3 +16232,591 @@ classification report:
 weighted avg       0.99      0.99      0.99       711
 
 ========================	test end	========================
+
+========================	2023-05-13 20:27:57	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainTrue
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainTrue	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: True	is_cluster: False	dataset_name: MODMA	order: 3	version: V2	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	2023-05-13 20:29:06	========================
+model name: 	MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse	epochs: 100	lr: 0.0002	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: CASIA	order: 3	version: V1	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+
+
+========================	2023-05-13 20:29:22	========================
+model name: 	MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse	epochs: 100	lr: 0.0002	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: CASIA	order: 3	version: V1	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 6	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.4236	 train accuracy: 100.000	 validation loss: 0.8689	 validation accuracy: 84.097 
+train(max_min): 	train loss: 0.4236	 train accuracy: 100.000	 validation loss: 0.5381	 validation accuracy: 89.583 
+best val accuracy: 89.583333 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.6041 	 test accuracy:	 83.194 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0   0   0   0 242]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       0.00      0.00      0.00       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       0.49      1.00      0.66       237
+
+    accuracy                           0.83      1440
+   macro avg       0.75      0.83      0.78      1440
+weighted avg       0.75      0.83      0.78      1440
+
+test: 			test loss: 	0.2250 	 test accuracy:	 87.500 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0  62   0   0 180]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      0.26      0.41       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       0.57      1.00      0.72       237
+
+    accuracy                           0.88      1440
+   macro avg       0.93      0.88      0.86      1440
+weighted avg       0.93      0.88      0.86      1440
+
+========================	test end	========================
+
+========================	2023-05-13 20:35:51	========================
+model name: 	MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse	epochs: 100	lr: 0.0002	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 10	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: CASIA	order: 3	version: V1	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 6	
+
+
+========================	2023-05-13 20:38:34	========================
+model name: 	MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse	epochs: 100	lr: 0.0002	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: CASIA	order: 3	version: V1	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 6	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.4259	 train accuracy: 100.000	 validation loss: 1.1654	 validation accuracy: 84.097 
+train(max_min): 	train loss: 0.4259	 train accuracy: 100.000	 validation loss: 0.5278	 validation accuracy: 96.528 
+best val accuracy: 96.527778 	 corresponding train accuracy: 95.162037
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.9335 	 test accuracy:	 83.194 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0   0   0   0 242]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       0.00      0.00      0.00       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       0.49      1.00      0.66       237
+
+    accuracy                           0.83      1440
+   macro avg       0.75      0.83      0.78      1440
+weighted avg       0.75      0.83      0.78      1440
+
+test: 			test loss: 	0.2465 	 test accuracy:	 95.069 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0 193   0   0  49]
+[  0   0   0 243   0   0]
+[  0   6   0   0 238   0]
+[  0   0  16   0   0 221]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       0.97      1.00      0.99       233
+  frustrated       0.92      0.80      0.86       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      0.98      0.99       244
+         sad       0.82      0.93      0.87       237
+
+    accuracy                           0.95      1440
+   macro avg       0.95      0.95      0.95      1440
+weighted avg       0.95      0.95      0.95      1440
+
+========================	test end	========================
+
+========================	2023-05-13 20:42:51	========================
+model name: 	MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse	epochs: 100	lr: 0.0002	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: CASIA	order: 3	version: V1	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 6	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.4218	 train accuracy: 100.000	 validation loss: 0.5508	 validation accuracy: 87.847 
+train(max_min): 	train loss: 0.4218	 train accuracy: 100.000	 validation loss: 0.4269	 validation accuracy: 100.000 
+best val accuracy: 100.000000 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.2716 	 test accuracy:	 85.972 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0  40   0   0 202]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      0.17      0.28       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       0.54      1.00      0.70       237
+
+    accuracy                           0.86      1440
+   macro avg       0.92      0.86      0.83      1440
+weighted avg       0.92      0.86      0.83      1440
+
+test: 			test loss: 	0.0995 	 test accuracy:	 100.000 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0 242   0   0   0]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      1.00      1.00       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       1.00      1.00      1.00       237
+
+    accuracy                           1.00      1440
+   macro avg       1.00      1.00      1.00      1440
+weighted avg       1.00      1.00      1.00      1440
+
+========================	test end	========================
+
+========================	2023-05-13 20:52:41	========================
+model name: 	MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse	epochs: 100	lr: 0.0002	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 10	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: CASIA	order: 3	version: V1	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 6	
+
+
+========================	2023-05-13 20:58:29	========================
+model name: 	MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse	epochs: 100	lr: 0.0002	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: CASIA	order: 3	version: V1	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 6	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.4211	 train accuracy: 100.000	 validation loss: 0.7012	 validation accuracy: 85.625 
+train(max_min): 	train loss: 0.4211	 train accuracy: 100.000	 validation loss: 0.4252	 validation accuracy: 100.000 
+best val accuracy: 100.000000 	 corresponding train accuracy: 99.930556
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.4316 	 test accuracy:	 84.514 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0  19   0   0 223]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      0.08      0.15       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       0.52      1.00      0.68       237
+
+    accuracy                           0.85      1440
+   macro avg       0.92      0.85      0.80      1440
+weighted avg       0.92      0.85      0.80      1440
+
+test: 			test loss: 	0.0714 	 test accuracy:	 100.000 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0 242   0   0   0]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      1.00      1.00       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       1.00      1.00      1.00       237
+
+    accuracy                           1.00      1440
+   macro avg       1.00      1.00      1.00      1440
+weighted avg       1.00      1.00      1.00      1440
+
+========================	test end	========================
+
+========================	2023-05-13 21:08:50	========================
+model name: 	MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse	epochs: 100	lr: 0.0002	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: CASIA	order: 3	version: V1	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 6	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.4245	 train accuracy: 100.000	 validation loss: 0.4256	 validation accuracy: 100.000 
+train(max_min): 	train loss: 0.4245	 train accuracy: 100.000	 validation loss: 0.4256	 validation accuracy: 100.000 
+best val accuracy: 100.000000 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.0742 	 test accuracy:	 100.000 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0 242   0   0   0]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      1.00      1.00       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       1.00      1.00      1.00       237
+
+    accuracy                           1.00      1440
+   macro avg       1.00      1.00      1.00      1440
+weighted avg       1.00      1.00      1.00      1440
+
+test: 			test loss: 	0.1016 	 test accuracy:	 100.000 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0 242   0   0   0]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      1.00      1.00       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       1.00      1.00      1.00       237
+
+    accuracy                           1.00      1440
+   macro avg       1.00      1.00      1.00      1440
+weighted avg       1.00      1.00      1.00      1440
+
+========================	test end	========================
+
+========================	2023-05-13 21:13:31	========================
+model name: 	MTCN_AT_v_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse
+addition: 	parameter setting:	model_name: MTCN_AT_v_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse	epochs: 100	lr: 0.0002	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: CASIA	order: 3	version: V1	attention_type: AF	multi_type: AT_v	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 6	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.4235	 train accuracy: 100.000	 validation loss: 0.9117	 validation accuracy: 84.097 
+train(max_min): 	train loss: 0.4235	 train accuracy: 100.000	 validation loss: 0.4292	 validation accuracy: 100.000 
+best val accuracy: 100.000000 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.6417 	 test accuracy:	 83.194 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0   0   0   0 242]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       0.00      0.00      0.00       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       0.49      1.00      0.66       237
+
+    accuracy                           0.83      1440
+   macro avg       0.75      0.83      0.78      1440
+weighted avg       0.75      0.83      0.78      1440
+
+test: 			test loss: 	0.0741 	 test accuracy:	 100.000 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0 242   0   0   0]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      1.00      1.00       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       1.00      1.00      1.00       237
+
+    accuracy                           1.00      1440
+   macro avg       1.00      1.00      1.00      1440
+weighted avg       1.00      1.00      1.00      1440
+
+========================	test end	========================
+
+========================	2023-05-13 21:21:42	========================
+model name: 	MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse	epochs: 100	lr: 0.0002	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: CASIA	order: 3	version: V1	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 6	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.4255	 train accuracy: 100.000	 validation loss: 0.7998	 validation accuracy: 84.792 
+train(max_min): 	train loss: 0.4253	 train accuracy: 100.000	 validation loss: 0.4252	 validation accuracy: 100.000 
+best val accuracy: 100.000000 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.5366 	 test accuracy:	 83.611 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0   6   0   0 236]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      0.02      0.05       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       0.50      1.00      0.67       237
+
+    accuracy                           0.84      1440
+   macro avg       0.92      0.84      0.79      1440
+weighted avg       0.92      0.84      0.79      1440
+
+test: 			test loss: 	0.0811 	 test accuracy:	 100.000 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0 242   0   0   0]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      1.00      1.00       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       1.00      1.00      1.00       237
+
+    accuracy                           1.00      1440
+   macro avg       1.00      1.00      1.00      1440
+weighted avg       1.00      1.00      1.00      1440
+
+========================	test end	========================
+
+========================	2023-05-13 21:31:58	========================
+model name: 	MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse	epochs: 100	lr: 0.0002	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: CASIA	order: 3	version: V1	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 188	num_class: 6	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.4280	 train accuracy: 100.000	 validation loss: 0.6586	 validation accuracy: 87.083 
+train(max_min): 	train loss: 0.4279	 train accuracy: 100.000	 validation loss: 0.4254	 validation accuracy: 100.000 
+best val accuracy: 100.000000 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.3756 	 test accuracy:	 85.556 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0  34   0   0 208]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      0.14      0.25       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       0.53      1.00      0.70       237
+
+    accuracy                           0.86      1440
+   macro avg       0.92      0.86      0.82      1440
+weighted avg       0.92      0.86      0.82      1440
+
+test: 			test loss: 	0.0623 	 test accuracy:	 100.000 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0 242   0   0   0]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      1.00      1.00       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       1.00      1.00      1.00       237
+
+    accuracy                           1.00      1440
+   macro avg       1.00      1.00      1.00      1440
+weighted avg       1.00      1.00      1.00      1440
+
+========================	test end	========================
+
+========================	2023-05-13 21:37:51	========================
+model name: 	MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse	epochs: 100	lr: 0.0002	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: CASIA	order: 3	version: V1	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 188	num_class: 6	
+
+
+========================	2023-05-13 21:40:49	========================
+model name: 	MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse	epochs: 100	lr: 0.0002	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 10	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: False	is_cluster: False	dataset_name: CASIA	order: 3	version: V1	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 188	num_class: 6	
+
+
+========================	train begin	========================
+train(final): 		train loss: 0.4321	 train accuracy: 100.000	 validation loss: 0.5300	 validation accuracy: 93.125 
+train(max_min): 	train loss: 0.4318	 train accuracy: 100.000	 validation loss: 0.4374	 validation accuracy: 99.861 
+best val accuracy: 99.861111 	 corresponding train accuracy: 100.000000
+========================	train end	========================
+
+========================	test begin	========================
+
+========================	test begin	========================
+test: 			test loss: 	0.2058 	 test accuracy:	 92.083 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0 128   0   0 114]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      0.53      0.69       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       0.68      1.00      0.81       237
+
+    accuracy                           0.92      1440
+   macro avg       0.95      0.92      0.92      1440
+weighted avg       0.95      0.92      0.92      1440
+
+test: 			test loss: 	0.0699 	 test accuracy:	 100.000 
+confusion matrix: 
+[241   0   0   0   0   0]
+[  0 233   0   0   0   0]
+[  0   0 242   0   0   0]
+[  0   0   0 243   0   0]
+[  0   0   0   0 244   0]
+[  0   0   0   0   0 237]
+
+classification report: 
+              precision    recall  f1-score   support
+
+       angry       1.00      1.00      1.00       241
+     excited       1.00      1.00      1.00       233
+  frustrated       1.00      1.00      1.00       242
+       happy       1.00      1.00      1.00       243
+     neutral       1.00      1.00      1.00       244
+         sad       1.00      1.00      1.00       237
+
+    accuracy                           1.00      1440
+   macro avg       1.00      1.00      1.00      1440
+weighted avg       1.00      1.00      1.00      1440
+
+========================	test end	========================
+
+========================	2023-05-13 21:49:15	========================
+model name: 	MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainTrue
+addition: 	parameter setting:	model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainTrue	epochs: 100	lr: 0.0004	pretrain_model_path: models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse.pt	batch_size: 64	spilt_rate: [0.6, 0.2, 0.2]	weight_decay: 0.2	optimizer_type: 2	beta1: 0.93	beta2: 0.98	gamma: 0.3	step_size: 30	random_seed: 34	model_type: MTCN	data_type: mfcc	save: True	augment: False	scheduler_type: 1	warmup: 400	initial_lr: 0.05	load_weight: True	is_cluster: False	dataset_name: MODMA	order: 3	version: V1	attention_type: AF	multi_type: AT_DIFF	patience: 10	is_mask: False	d_model: 256	n_head: 8	d_qkv: 64	d_ff: 1024	n_layer: 3	feature_dim: 39	dilation: 8	filters: 39	kernel_size: 2	drop_rate: 0.1	seq_len: 313	num_class: 2	
+

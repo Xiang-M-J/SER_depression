@@ -105,6 +105,8 @@ def train(dataset, paths: list):
         model_name_or_path,
         config=config,
     )
+    casia_model = torch.load("models/wav2vec2_ser_casia_best.pt")
+    model.wav2vec2.load_state_dict(casia_model.wav2vec2.state_dict())
     model.gradient_checkpointing_enable()
     parameter = []
     for name, param in model.named_parameters():  # 仅训练classifier.dense和classifier.out_proj
@@ -184,10 +186,10 @@ def test(model_path:str, dataset):
 
 
 if __name__ == "__main__":
-    paths = ['models/wav2vec2_ser_modma_final.pt', 'models/wav2vec2_ser_modma_best.pt',
-             "results/wav2vec2_modma.npy", "results/optim_modma.pth"]
+    paths = ['models/wav2vec2_ser_modma_casia_final.pt', 'models/wav2vec2_ser_modma_casia_best.pt',
+             "results/wav2vec2_modma_casia.npy", "results/optim_modma_casia.pth"]
     dataset = PretrainDataModule(model_name_or_path, 2, "y/modma_y.npy", "x/MODMA/", duration=10)
     dataset.setup()
-    train(dataset, paths)
+    # train(dataset, paths)
     test(paths[0], dataset)
     test(paths[1], dataset)

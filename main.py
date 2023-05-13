@@ -16,7 +16,7 @@ args.spilt_rate = spilt_rate
 args.num_class = 2
 args.multi_type = "AT_DIFF"
 # args.is_cluster = True
-args.pretrain_model_path = "models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse_clusterFalse.pt"
+args.pretrain_model_path = "models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse.pt"
 if __name__ == "__main__":
     print("dataset name: ", args.dataset_name)
     print("model type: ", args.model_type)
@@ -34,7 +34,8 @@ if __name__ == "__main__":
         agent.train(train_dataset, val_dataset, test_dataset)
         agent.test(test_dataset, model_path=None)
         print(agent.test_acc)
-        print(np.mean(agent.test_acc))
+        if len(agent.test_acc) != 0:
+            print(np.mean(agent.test_acc))
         # agent.multi_test(test_dataset)
     else:
         print("请修改模型名后再次执行")

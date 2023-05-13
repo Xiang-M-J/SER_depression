@@ -5,21 +5,21 @@ import torch
 import torch.nn as nn
 from torch.cuda.amp import GradScaler
 from tqdm import tqdm
-from transformers import Wav2Vec2PreTrainedModel, Wav2Vec2Model, AutoConfig
+from transformers import HubertPreTrainedModel, HubertModel, AutoConfig
 
 from data_module import PretrainDataModule
 from pretrain_utils import train_step, val_step
 from utils import Metric
 
-model_name_or_path = "jonatasgrosman/wav2vec2-large-xlsr-53-chinese-zh-cn"
+model_name_or_path = "TencentGameMate/chinese-hubert-base"
 num_class = 2
 epochs = 30
 pooling_mode = 'mean'
 spilt_rate = [0.6, 0.2, 0.2]
 use_amp = True
 label_list = ['HC', 'MDD']
-batch_size = 8
-lr = 1e-4
+batch_size = 16
+lr = 2e-4
 beta1 = 0.93
 beta2 = 0.98
 
@@ -30,8 +30,8 @@ setattr(config, 'num_class', num_class)
 setattr(config, 'pooling_mode', pooling_mode)
 
 
-class Wav2Vec2ClassificationHead(nn.Module):
-    """Head for wav2vec2.0 classification task."""
+class HubertClassificationHead(nn.Module):
+    """Head for hubert classification task."""
 
     def __init__(self, config):
         super().__init__()
@@ -41,7 +41,6 @@ class Wav2Vec2ClassificationHead(nn.Module):
         self.out_proj = nn.Linear(config.hidden_size, config.num_class)
 
     def forward(self, x, **kwargs):
-        # x = self.dropout(x)
         x = self.dense(x)
         x = torch.tanh(x)
         x = self.dropout(x)
@@ -62,14 +61,14 @@ def merged_strategy(hidden_states, mode="mean"):
     return outputs
 
 
-class Wav2Vec2ForSpeechClassification(Wav2Vec2PreTrainedModel):
+class HubertForSpeechClassification(HubertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
         self.num_class = config.num_class
         self.pooling_mode = config.pooling_mode
         self.config = config
-        self.wav2vec2 = Wav2Vec2Model(self.config)
-        self.classifier = Wav2Vec2ClassificationHead(config)
+        self.hubert = HubertModel(self.config)
+        self.classifier = HubertClassificationHead(config)
 
         self.init_weights()
 
@@ -80,7 +79,7 @@ class Wav2Vec2ForSpeechClassification(Wav2Vec2PreTrainedModel):
             # output_attentions=None,
             # output_hidden_states=None,
     ):
-        outputs = self.wav2vec2(
+        outputs = self.hubert(
             input_values,
             # attention_mask=attention_mask,
             # output_attentions=output_attentions,
@@ -101,14 +100,14 @@ def train(dataset, paths: list):
     train_loader = dataset.train_dataloader(batch_size=batch_size)
     val_loader = dataset.val_dataloader(batch_size=batch_size)
 
-    model = Wav2Vec2ForSpeechClassification.from_pretrained(
+    model = HubertForSpeechClassification.from_pretrained(
         model_name_or_path,
         config=config,
     )
     model.gradient_checkpointing_enable()
     parameter = []
     for name, param in model.named_parameters():  # 仅训练classifier.dense和classifier.out_proj
-        if "wav2vec" in name:
+        if "hubert" in name:
             # param.requires_grad = False
             parameter.append({'params': param, 'lr': 0.2 * lr})
         else:
@@ -165,7 +164,7 @@ def train(dataset, paths: list):
         torch.save(state, paths[3])
 
 
-def test(model_path:str, dataset):
+def m_test(model_path:str, dataset):
     model = torch.load(model_path)
     test_acc = 0
     test_loss = []
@@ -184,10 +183,10 @@ def test(model_path:str, dataset):
 
 
 if __name__ == "__main__":
-    paths = ['models/wav2vec2_ser_modma_final.pt', 'models/wav2vec2_ser_modma_best.pt',
-             "results/wav2vec2_modma.npy", "results/optim_modma.pth"]
+    paths = ['models/hubert_ser_modma_final.pt', 'models/hubert_ser_modma_best.pt',
+             "results/hubert_modma.npy", "results/hubert_optim_modma.pth"]
     dataset = PretrainDataModule(model_name_or_path, 2, "y/modma_y.npy", "x/MODMA/", duration=10)
     dataset.setup()
     train(dataset, paths)
-    test(paths[0], dataset)
-    test(paths[1], dataset)
+    m_test(paths[0], dataset)
+    m_test(paths[1], dataset)

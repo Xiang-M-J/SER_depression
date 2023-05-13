@@ -12,13 +12,12 @@ from pretrain_utils import train_step, val_step
 from utils import Metric
 
 model_name_or_path = "jonatasgrosman/wav2vec2-large-xlsr-53-chinese-zh-cn"
-num_class = 2
+num_class = 6
 epochs = 30
 pooling_mode = 'mean'
 spilt_rate = [0.6, 0.2, 0.2]
 use_amp = True
-label_list = ['HC', 'MDD']
-batch_size = 8
+batch_size = 16
 lr = 1e-4
 beta1 = 0.93
 beta2 = 0.98
@@ -32,16 +31,13 @@ setattr(config, 'pooling_mode', pooling_mode)
 
 class Wav2Vec2ClassificationHead(nn.Module):
     """Head for wav2vec2.0 classification task."""
-
     def __init__(self, config):
         super().__init__()
         self.dense = nn.Linear(config.hidden_size, config.hidden_size)
-        # self.dropout = nn.Dropout(config.final_dropout)
         self.dropout = nn.Dropout(0.1)
         self.out_proj = nn.Linear(config.hidden_size, config.num_class)
 
-    def forward(self, x, **kwargs):
-        # x = self.dropout(x)
+    def forward(self, x):
         x = self.dense(x)
         x = torch.tanh(x)
         x = self.dropout(x)
@@ -49,49 +45,19 @@ class Wav2Vec2ClassificationHead(nn.Module):
         return x
 
 
-def merged_strategy(hidden_states, mode="mean"):
-    if mode == "mean":
-        outputs = torch.mean(hidden_states, dim=1)
-    elif mode == "sum":
-        outputs = torch.sum(hidden_states, dim=1)
-    elif mode == "max":
-        outputs = torch.max(hidden_states, dim=1)[0]
-    else:
-        raise Exception(
-            "The pooling method hasn't been defined! Your pooling mode must be one of these ['mean', 'sum', 'max']")
-    return outputs
-
-
 class Wav2Vec2ForSpeechClassification(Wav2Vec2PreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
-        self.num_class = config.num_class
-        self.pooling_mode = config.pooling_mode
-        self.config = config
-        self.wav2vec2 = Wav2Vec2Model(self.config)
+        self.wav2vec2 = Wav2Vec2Model(config)
         self.classifier = Wav2Vec2ClassificationHead(config)
-
         self.init_weights()
 
-    def forward(
-            self,
-            input_values,
-            # attention_mask=None,
-            # output_attentions=None,
-            # output_hidden_states=None,
-    ):
-        outputs = self.wav2vec2(
-            input_values,
-            # attention_mask=attention_mask,
-            # output_attentions=output_attentions,
-            # output_hidden_states=output_hidden_states,
-            # return_dict=return_dict,
-        )
+    def forward(self, x):
+        outputs = self.wav2vec2(x)
         hidden_states = outputs[0]
-        hidden_states = merged_strategy(hidden_states, mode=self.pooling_mode)
-        logits = self.classifier(hidden_states)
-
-        return logits
+        x = torch.mean(hidden_states, dim=1)
+        x = self.classifier(x)
+        return x
 
 
 def train(dataset, paths: list):
@@ -107,9 +73,8 @@ def train(dataset, paths: list):
     )
     model.gradient_checkpointing_enable()
     parameter = []
-    for name, param in model.named_parameters():  # 仅训练classifier.dense和classifier.out_proj
+    for name, param in model.named_parameters():
         if "wav2vec" in name:
-            # param.requires_grad = False
             parameter.append({'params': param, 'lr': 0.2 * lr})
         else:
             parameter.append({'params': param, "lr": lr})
@@ -165,7 +130,7 @@ def train(dataset, paths: list):
         torch.save(state, paths[3])
 
 
-def test(model_path:str, dataset):
+def test(model_path: str, dataset):
     model = torch.load(model_path)
     test_acc = 0
     test_loss = []
@@ -184,9 +149,8 @@ def test(model_path:str, dataset):
 
 
 if __name__ == "__main__":
-    paths = ['models/wav2vec2_ser_modma_final.pt', 'models/wav2vec2_ser_modma_best.pt',
-             "results/wav2vec2_modma.npy", "results/optim_modma.pth"]
-    dataset = PretrainDataModule(model_name_or_path, 2, "y/modma_y.npy", "x/MODMA/", duration=10)
+    paths = ['models/casia.pt', 'models/casia_best.pt',  "results/metric.npy", "results/optim_casia.pth"]
+    dataset = PretrainDataModule(model_name_or_path, 6, "casia_y.npy", "../preprocess/datasets/CASIA", duration=6)
     dataset.setup()
     train(dataset, paths)
     test(paths[0], dataset)

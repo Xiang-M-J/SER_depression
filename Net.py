@@ -156,10 +156,10 @@ class Agent:
             # 对于MTCN
             # pretrain_name = ['generalExtractor', 'specialExtractor']
             pretrain_name = ['generalExtractor']  # 只固定 generalExtractor的效果更好一点
-            for k, v in pretrain_model_dict:
-                if k.split('.')[0] != "classifier":
-                    model_dict.update({k: v})
-            model.load_state_dict(model_dict)
+            # for k, v in pretrain_model_dict:
+            #     if k.split('.')[0] != "classifier":
+            #         model_dict.update({k: v})
+            model.block.block1.load_state_dict(pretrain_model.block.block1.state_dict())
             parameter = []
             for name, param in model.named_parameters():
                 if name.split('.')[0] in pretrain_name:
@@ -252,7 +252,7 @@ class Agent:
                     metric.val_acc[-1]))
             print(optimizer.param_groups[0]['lr'])
             if metric.val_acc[-1] > best_val_accuracy:
-                print(f"val_accuracy improved from {best_val_accuracy} to {metric.val_acc[-1]}")
+                print(f"val_accuracy improved from {best_val_accuracy :.3f} to {metric.val_acc[-1]:.3f}")
                 best_val_accuracy = metric.val_acc[-1]
                 metric.best_val_acc[0] = best_val_accuracy
                 metric.best_val_acc[1] = metric.train_acc[-1]

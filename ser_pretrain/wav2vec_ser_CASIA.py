@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.cuda.amp import GradScaler
+from tqdm import tqdm
 from transformers import Wav2Vec2PreTrainedModel, Wav2Vec2Model, AutoConfig
 
 from data_module import PretrainDataModule
@@ -13,7 +14,7 @@ from utils import Metric
 
 model_name_or_path = "jonatasgrosman/wav2vec2-large-xlsr-53-chinese-zh-cn"
 num_class = 6
-epochs = 50
+epochs = 35
 pooling_mode = 'mean'
 spilt_rate = [0.6, 0.2, 0.2]
 use_amp = True
@@ -123,13 +124,13 @@ def train(dataset, paths: list):
         train_loss = 0
         val_correct = 0
         val_loss = 0
-        for step, (bx, by) in enumerate(train_loader):
+        for bx, by in tqdm(train_loader):
             correct_num, loss_v = train_step(model, optimizer, bx, by, use_amp, scaler)
             train_correct += correct_num.cpu().numpy()
             train_loss += loss_v
         model.eval()
         with torch.no_grad():
-            for step, (vx, vy) in enumerate(val_loader):
+            for vx, vy in tqdm(val_loader):
                 correct_num, loss_v = val_step(model, vx, vy, use_amp)
                 val_correct += correct_num.cpu().numpy()
                 val_loss += loss_v
@@ -157,14 +158,14 @@ def train(dataset, paths: list):
         torch.save(state, paths[3])
 
 
-def test(model_path:str, dataset):
+def test(model_path: str, dataset):
     model = torch.load(model_path)
     test_acc = 0
     test_loss = []
     test_num = dataset.test_num
     test_loader = dataset.test_dataloader(batch_size=batch_size)
     with torch.no_grad():
-        for step, (vx, vy) in enumerate(test_loader):
+        for vx, vy in tqdm(test_loader):
             correct_num, loss_v = val_step(model, vx, vy, use_amp)
             test_acc += correct_num.cpu().numpy()
             test_loss.append(loss_v)
