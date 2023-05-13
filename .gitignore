@@ -17,6 +17,7 @@ wandb
 .idea
 *.svg
 *.7z
+log.txt
 ser_pretrain/x
 ser_pretrain/y
 ser_pretrain/models

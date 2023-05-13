@@ -14,7 +14,7 @@ args.dataset_name = dataset_name
 args.spilt_rate = spilt_rate
 args.num_class = 2
 args.multi_type = "AT_DIFF"
-args.pretrain_model_path = "models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse.pt"
+args.pretrain_model_path = "models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse.pt"
 if __name__ == "__main__":
     print("dataset name: ", args.dataset_name)
     print("model type: ", args.model_type)
