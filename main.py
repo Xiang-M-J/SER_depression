@@ -13,7 +13,7 @@ args.model_type = model_type
 args.dataset_name = dataset_name
 args.spilt_rate = spilt_rate
 args.num_class = 2
-args.multi_type = "v_DIFF"
+args.multi_type = "AT_DIFF"
 args.pretrain_model_path = "models/MTCN_AT_DIFF_CASIA_order3_drop1_epoch100_l2re2_lr0002_pretrainFalse.pt"
 if __name__ == "__main__":
     print("dataset name: ", args.dataset_name)
@@ -36,3 +36,4 @@ if __name__ == "__main__":
             print(np.mean(agent.test_acc))
     else:
         print("请修改模型名后再次执行")
+    args.write(model_name)
