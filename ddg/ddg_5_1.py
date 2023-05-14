@@ -10,7 +10,7 @@ from einops.layers.torch import Rearrange
 from matplotlib import pyplot as plt
 from torch.autograd import Function
 from torch.cuda.amp import GradScaler
-from ddg_4 import Hidden, Discriminator, GRL
+from ddg import Hidden, Discriminator, GRL
 from multiModel import mmd
 from config import Args
 from model import AT_TAB, TAB_DIFF
@@ -188,6 +188,16 @@ class Trainer:
         optimizer.step()
         return loss, correct_num
 
+    def train_step_ddg(self, model, optimizer, hidden1, hidden2, discriminator, train_batch, p, index):
+        x, y = self.get_data(train_batch[0])
+        label_loss, correct_num_label = model(x, y, index)
+        ddg_loss, correct_num_domain = model.get_loss(hidden1, hidden2, discriminator, train_batch, p)
+        loss = label_loss + ddg_loss
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        return correct_num_domain
+
     @staticmethod
     def get_data(batch):
         x, y = batch
@@ -219,13 +229,9 @@ class Trainer:
             {"params": model.classifier1.parameters(), 'lr': arg.lr}
         ]
         parameter2 = [
-            # {"params": model.prepare2.parameters(), "lr": 0.5 * arg.lr},
-            {"params": model.generalExtractor.parameters(), 'lr': 0.1 * arg.lr},
+            {"params": model.generalExtractor.parameters(), 'lr': arg.lr},
             {"params": model.specialExtractor2.parameters(), 'lr': 0.5 * arg.lr},
-            {"params": model.classifier2.parameters(), 'lr': 0.5 * arg.lr}
-        ]
-        parameter3 = [
-            {'params': model.generalExtractor.parameters(), 'lr': 0.5 * arg.lr},
+            {"params": model.classifier2.parameters(), 'lr': 0.5 * arg.lr},
             {'params': hidden1.parameters(), 'lr': arg.lr},
             {"params": hidden2.parameters(), 'lr': arg.lr},
             {"params": discriminator.parameters(), 'lr': arg.lr}
@@ -234,8 +240,6 @@ class Trainer:
         scheduler1 = self.get_scheduler(optimizer1, arg)
         optimizer2 = self.get_optimizer(arg, parameter2, lr=arg.lr)
         scheduler2 = self.get_scheduler(optimizer2, arg)
-        ddg_optimizer = torch.optim.SGD(parameter3, lr=arg.lr, weight_decay=0.1)
-        ddg_scheduler = torch.optim.lr_scheduler.StepLR(ddg_optimizer, step_size=30, gamma=0.3)
 
         best_val_accuracy = 0
         metric = Metric()
@@ -248,10 +252,8 @@ class Trainer:
         train_loss = 0
         for epoch in range(self.epochs):
             model.train()
-
             if epoch % 6 == 0:
-                for batch in self.loader[1][0]:
-                    self.train_step(model, optimizer2, batch, 1)
+                p = epoch / self.epochs
                 for _ in range(mini_iter):
                     train_batch = []
                     for i in range(dataset_num):
@@ -261,11 +263,8 @@ class Trainer:
                             train_iter[i] = iter(self.loader[i][0])
                             batch = next(train_iter[i])
                         train_batch.append(batch)
-                    p = epoch / self.epochs
-                    loss, correct_num_domain = model.get_loss(hidden1, hidden2, discriminator, train_batch, p)
-                    ddg_optimizer.zero_grad()
-                    loss.backward()
-                    ddg_optimizer.step()
+                    correct_num_domain = self.train_step_ddg(model, optimizer2, hidden1, hidden2,
+                                                             discriminator, train_batch, p, 1)
                     domain_acc += correct_num_domain.cpu().numpy()
                     domain_num += len(train_batch[1][0])
                     domain_num += len(train_batch[0][0])
@@ -279,7 +278,6 @@ class Trainer:
 
             scheduler1.step()
             scheduler2.step()
-            ddg_scheduler.step()
             print(f"epoch {epoch + 1}:")
             train_acc = train_acc / len(self.loader[0][0].dataset)
             train_loss = train_loss / mini_iter

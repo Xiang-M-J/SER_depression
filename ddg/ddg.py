@@ -1,32 +1,25 @@
-# 在ddg_3的基础上删除了MModel上的prepare
 import copy
-import datetime
 import math
 import os
-
-import numpy as np
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim
-from einops.layers.torch import Rearrange
+import numpy as np
 from matplotlib import pyplot as plt
 from torch.autograd import Function
+import torch.optim
 from torch.cuda.amp import autocast, GradScaler
-
-from blocks import Chomp1d
+from einops.layers.torch import Rearrange
+import torch.nn.functional as F
 from config import Args
-from model import AT_TAB, TAB_DIFF
-from multiModel import mmd, Classifier
-# from multiModel import MModel
-from utils import load_loader, NoamScheduler, Metric, EarlyStopping, accuracy_cal, EarlyStoppingLoss
+from multiModel import MModel, mmd
+from blocks import Chomp1d
+from utils import get_newest_file, load_loader, NoamScheduler, Metric, EarlyStopping, accuracy_cal
 
-dataset_name = ['MODMA', 'CASIA']
-num_class = [2, 6]
+dataset_name = ['MODMA', 'CASIA2']
+num_class = [2, 2]
 seq_len = [313, 188]
-num_sample = [3549, 7200]
+num_sample = [3549, 2400]
 split_rate = [0.6, 0.2, 0.2]
 dataset_num = len(dataset_name)
-mu = 0.2
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 use_amp = False
 if use_amp:
@@ -82,50 +75,6 @@ class Hidden(nn.Module):
         return x
 
 
-class MModel(nn.Module):
-    def __init__(self, arg: Args, index, num_layers=None, seq_len=None):
-        super(MModel, self).__init__()
-        if num_layers is None:
-            num_layers = [3, 5]
-        if seq_len is not None:
-            arg.seq_len = seq_len
-        arg.dilation = num_layers[0] + num_layers[1]
-        self.shareNet = AT_TAB(arg, num_layers, index=0)
-        merge = nn.Sequential(
-            nn.Linear(arg.dilation, 1),
-            # nn.Dropout(0.2)
-        )
-        self.specialNet = nn.Sequential(
-            TAB_DIFF(arg, num_layer=num_layers, index=1),
-            merge,
-            Classifier(arg, index),
-        )
-
-    def get_generalFeature(self, x):
-        x_f = x
-        x_b = torch.flip(x, dims=[-1])
-        _, x_f, _ = self.shareNet(x_f, x_b)
-        return x_f
-
-    def get_mmd_feature(self, x):
-        x_f = x
-        x_b = torch.flip(x, dims=[-1])
-        _, x_f, _ = self.shareNet(x_f, x_b)
-        _, x_f = self.specialNet[0](x_f)
-        return x_f
-
-    def forward(self, x, y):
-        x_f = x
-        x_b = torch.flip(x, dims=[-1])
-        x_1, x_f, _ = self.shareNet(x_f, x_b)
-        x_2, x_f = self.specialNet[0](x_f)
-        x = self.specialNet[1](torch.cat([x_1, x_2], dim=-1))
-        x = self.specialNet[2](x)
-        loss = F.cross_entropy(x, y)
-        correct_num = accuracy_cal(x, y)
-        return loss, correct_num
-
-
 class Discriminator(nn.Module):
     def __init__(self, arg):
         super(Discriminator, self).__init__()
@@ -155,8 +104,8 @@ class DDGTrainer:
         args.num_class = num_class
         self.optimizer_type = args.optimizer_type
         self.epochs = args.epochs
-        self.inner_iter = 30    # 23 ?
-        self.mmd_step = 3   # 3 ?
+        self.inner_iter = 23
+        self.mmd_step = 6
         self.feature_dim = args.feature_dim
         self.batch_size = args.batch_size
         self.seq_len = args.seq_len
@@ -164,15 +113,10 @@ class DDGTrainer:
         self.weight_decay = args.weight_decay
         self.best_path = "models/ddg/MODMA_best.pt"
         self.model_path = "models/ddg/MODMA.pt"
-        self.pretrain_path = f"models/ddg/pretrain_{dataset_name[1]}_2.pt"
-        self.pretrain_best_path = f"models/ddg/pretrain_{dataset_name[1]}_best_2.pt"
+        self.pretrain_path = f"models/ddg/pretrain_{dataset_name[1]}.pt"
+        self.pretrain_best_path = f"models/ddg/pretrain_{dataset_name[1]}_best.pt"
         self.result_train_path = "results/data/ddg/train.npy"
         self.result_test_path = "results/data/ddg/test.npy"
-        date = datetime.datetime.now().strftime("%d_%H_%M")
-        tmp_path = f"models/ddg/ddg_4_{date}"
-        if not os.path.exists(tmp_path):
-            os.mkdir(tmp_path)
-        self.tmp_model_path = tmp_path + "/MODMA_"
         self.models = []
         self.record_epochs = []
         self.test_acc = []
@@ -232,9 +176,9 @@ class DDGTrainer:
         return x, y
 
     @staticmethod
-    def get_mmd_loss(model, hidden1, hidden2, train_batch):
+    def get_mmd_loss(model, src_model: MModel, hidden1, hidden2, train_batch):
         x1 = model.get_generalFeature(train_batch[0][0].to(device))
-        x2 = model.get_generalFeature(train_batch[1][0].to(device))
+        x2 = src_model.get_generalFeature(train_batch[1][0].to(device))
         mini_shape = min([x1.shape[0], x2.shape[0]])
         x1, x2 = x1[:mini_shape], x2[:mini_shape]
         mmd_feature = [hidden1(x1), hidden2(x2)]
@@ -244,9 +188,9 @@ class DDGTrainer:
         return mmd_loss
 
     @staticmethod
-    def get_domain_loss(model, hidden1, hidden2, discriminator, train_batch, p):
+    def get_domain_loss(model, src_model, hidden1, hidden2, discriminator, train_batch, p):
         x1 = model.get_generalFeature(train_batch[0][0].to(device))
-        x2 = model.get_generalFeature(train_batch[1][0].to(device))
+        x2 = src_model.get_generalFeature(train_batch[1][0].to(device))
         generalFeature = [hidden1(x1), hidden2(x2)]
         x = torch.cat(generalFeature, dim=0)
         label = torch.cat([torch.ones(len(train_batch[0][0])), torch.zeros(len(train_batch[1][0]))], dim=0).long()
@@ -359,27 +303,37 @@ class DDGTrainer:
         print(f"test Accuracy:{test_acc * 100:.3f}\t")
 
     def train(self):
+        arg.step_size = 30
+        arg.gamma = 0.3
         mini_iter = min([len(self.loader[i][0]) for i in range(dataset_num)])
         train_iter = [iter(self.loader[i][0]) for i in range(dataset_num)]
-
+        src_model = torch.load(self.pretrain_path)
+        src_model.eval()
         model = MModel(arg, seq_len=seq_len[0], index=0).to(device)
         optimizer = self.get_optimizer(arg, model.parameters(), lr=arg.lr)
         scheduler = self.get_scheduler(optimizer, arg)
         hidden1 = Hidden(arg).to(device)
         hidden2 = Hidden(arg).to(device)
-        hidden1.train()
-        hidden2.train()
+        parameter = [
+            {'params': model.prepare.parameters(), 'lr': 0.2 * arg.lr},
+            {'params': model.shareNet.parameters(), 'lr': 0.2 * arg.lr},
+            {'params': hidden1.parameters(), 'lr': arg.lr},
+            {'params': hidden2.parameters(), 'lr': arg.lr},
+        ]
+        share_optimizer = torch.optim.SGD(parameter, lr=arg.lr)
+        share_scheduler = torch.optim.lr_scheduler.StepLR(share_optimizer, step_size=30, gamma=0.3)
         discriminator = Discriminator(arg).to(device)
         discriminator.train()
         parameter = [
-            {'params': model.shareNet.parameters(), 'lr': arg.lr},
+            {'params': model.prepare.parameters(), 'lr': 0.2 * arg.lr},
+            {'params': model.shareNet.parameters(), 'lr': 0.2 * arg.lr},
             {'params': hidden1.parameters(), 'lr': arg.lr},
             {"params": hidden2.parameters(), 'lr': arg.lr},
             {"params": discriminator.parameters(), 'lr': arg.lr}
         ]
-        ddg_optimizer = torch.optim.SGD(parameter, lr=arg.lr)
-        ddg_scheduler = torch.optim.lr_scheduler.StepLR(ddg_optimizer, step_size=30, gamma=0.3)
-        early_stop = EarlyStoppingLoss(patience=5, delta_loss=6e-4)
+        disc_optimizer = torch.optim.SGD(parameter, lr=arg.lr)
+        disc_scheduler = torch.optim.lr_scheduler.StepLR(disc_optimizer, step_size=30, gamma=0.3)
+
         best_val_accuracy = 0
         metric = Metric()
         domain_acc = 0
@@ -392,7 +346,12 @@ class DDGTrainer:
         val_num = len(self.loader[0][1].dataset)
         for epoch in range(self.epochs):
             model.train()
-            if (epoch+1) % self.mmd_step == 0:
+            for batch in self.loader[0][0]:
+                loss, correct_num = self.train_step(model, optimizer, batch)
+                train_acc += correct_num.cpu().numpy()
+                train_loss += loss.data.item()
+
+            if (epoch + 1) % self.mmd_step == 0 and (0 < epoch < 101):
                 m_loss = []
                 for step in range(self.inner_iter):
                     train_batch = []
@@ -403,29 +362,28 @@ class DDGTrainer:
                             train_iter[i] = iter(self.loader[i][0])
                             batch = next(train_iter[i])
                         train_batch.append(batch)
-                    mmd_loss = self.get_mmd_loss(model, hidden1, hidden2, train_batch)
+                    mmd_loss = self.get_mmd_loss(model, src_model, hidden1, hidden2, train_batch)
                     m_loss.append(mmd_loss.data.item())
+                    share_optimizer.zero_grad()
+                    mmd_loss.backward()
+                    share_optimizer.step()
                     p = epoch / self.epochs
-                    domain_loss, correct_num = self.get_domain_loss(model, hidden1, hidden2, discriminator,
+                    domain_loss, correct_num = self.get_domain_loss(model, src_model, hidden1, hidden2, discriminator,
                                                                     train_batch, p)
-                    loss = (1-mu) * mmd_loss + mu * domain_loss
-                    ddg_optimizer.zero_grad()
-                    loss.backward()
-                    ddg_optimizer.step()
+                    disc_optimizer.zero_grad()
+                    domain_loss.backward()
+                    disc_optimizer.step()
                     domain_acc += correct_num.cpu().numpy()
                     domain_num += len(train_batch[1][0])
                     domain_num += len(train_batch[0][0])
                 domain_acc = domain_acc / domain_num
                 print(f"domain accuracy: {domain_acc:.3f}")
+
                 print(np.mean(m_loss))
 
-            for batch in self.loader[0][0]:
-                loss, correct_num = self.train_step(model, optimizer, batch)
-                train_acc += correct_num.cpu().numpy()
-                train_loss += loss.data.item()
-
             scheduler.step()
-            ddg_scheduler.step()
+            share_scheduler.step()
+            disc_scheduler.step()
             print(f"epoch {epoch + 1}:")
             train_acc = train_acc / train_num
             train_loss = train_loss / mini_iter
@@ -451,10 +409,9 @@ class DDGTrainer:
             if val_acc > 0.994:
                 tmp = self.multi_test(model)
                 self.test_acc.append(tmp)
-                if tmp > 0.994:
-                    torch.save(model, self.tmp_model_path+f"{epoch}_"+f"{tmp*1000}.pt")
-                    self.models.append(copy.deepcopy(model))
+                self.models.append(copy.deepcopy(model))
             plt.clf()
+
             plt.plot(metric.train_acc)
             plt.plot(metric.val_acc)
             plt.ylabel("accuracy(%)")
@@ -463,8 +420,7 @@ class DDGTrainer:
             plt.title(f"train accuracy and validation accuracy")
             plt.pause(0.02)
             plt.ioff()  # 关闭画图的窗口
-            # if early_stop(val_loss):
-            #     break
+
             domain_acc = 0
             domain_num = 0
             val_acc = 0
@@ -504,6 +460,7 @@ class DDGTrainer:
                 loss, correct_num = self.test_step(model, batch)
                 test_acc += correct_num
                 test_loss += loss.data.item()
+
         print("best path")
         test_acc = test_acc / test_num
         test_loss = test_loss / math.ceil(test_num / self.batch_size)
@@ -528,10 +485,8 @@ if __name__ == "__main__":
     arg = Args()
     arg.random_seed = 34
     trainer = DDGTrainer(arg)
-    # trainer.pretrain()
     trainer.train()
     trainer.test()
     print(trainer.test_acc)
-
     # for m in trainer.models:
     #     print(m.prepare.net[0].bias[0:9])

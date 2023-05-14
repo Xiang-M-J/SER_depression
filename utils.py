@@ -4,7 +4,7 @@ import os
 
 import torchaudio
 from transformers import Wav2Vec2Processor
-
+from matplotlib.font_manager import FontProperties
 from config import Args
 from preprocess.process_utils import MODMA_code
 import matplotlib.pyplot as plt
@@ -16,6 +16,8 @@ import random
 
 plt.rcParams['font.sans-serif'] = ['Simhei']  # 显示中文
 plt.rcParams['axes.unicode_minus'] = False  # 显示负号
+plt.rcParams['font.size'] = "14.0"
+font_small = FontProperties(family="Simhei", size=10)
 
 CLASS_LABELS = ["angry", "boredom", "disgust", "fear", "happy", "neutral", "sad"]
 IEMOCAP_LABELS = ['angry', 'excited', 'frustrated', 'happy', 'neutral', 'sad']
@@ -333,7 +335,7 @@ def confusion_matrix(pred, labels, conf_matrix):
     return conf_matrix
 
 
-def plot_matrix(cm, labels_name, model_name: str, title='Confusion matrix', normalize=False,
+def plot_matrix(cm, labels_name, model_name: str, title='混淆矩阵', normalize=False,
                 result_path: str = "results/", best=False):
     """绘制混淆矩阵，保存并返回
 
@@ -388,9 +390,9 @@ def plot_matrix(cm, labels_name, model_name: str, title='Confusion matrix', norm
                          ha="center", va="center",
                          color="white" if cm[i][j] > thresh else "black")
     plt.tight_layout()
-    # plt.subplots_adjust(left=0.01,bottom=0.1)
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
+    # plt.subplots_adjust(bottom=0.1)
+    plt.ylabel('真实标签', fontproperties=font_small)
+    plt.xlabel('预测标签', fontproperties=font_small)
     img_path = result_path + "images/" + model_name + "_confusion_matrix_best.jpg" if best else result_path + "images/" + model_name + "_confusion_matrix_final.jpg"
     plt.savefig(img_path, dpi=dpi)
     # 显示
@@ -615,17 +617,17 @@ def plot_2(path, name: str, result_path: str = "results/", ):
     plt.subplot(1, 2, 1)
     plt.plot(epoch, train_acc)
     plt.plot(epoch, val_acc)
-    plt.legend(["train accuracy", "validation accuracy"])
-    plt.xlabel("epoch")
-    plt.ylabel("accuracy(%)")
-    plt.title("train accuracy and validation accuracy")
+    plt.legend(["训练集准确率", "验证集准确率"])
+    plt.xlabel("迭代轮次")
+    plt.ylabel("准确率(%)")
+    plt.title("训练集与验证集准确率变化曲线图")
     plt.subplot(1, 2, 2)
     plt.plot(epoch, train_loss)
     plt.plot(epoch, val_loss)
-    plt.legend(["train loss", "validation loss"])
-    plt.xlabel("epoch")
-    plt.ylabel("loss")
-    plt.title("train loss and validation loss")
+    plt.legend(["训练集损失", "验证集损失"])
+    plt.xlabel("迭代轮次")
+    plt.ylabel("损失")
+    plt.title("训练集与验证集损失变化曲线图")
     plt.savefig(result_path + "images/" + name + "acc_and_loss.svg", dpi=dpi)
 
 
@@ -934,6 +936,5 @@ if __name__ == "__main__":
     #        "pretrain_True1")
     # args = Args()
     # plot_noam(args=args)
-    model_structure(
-        model_path="models/MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse.pt")
+    model_structure(model_path="model.pt")
     pass

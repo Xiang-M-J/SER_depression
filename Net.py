@@ -387,7 +387,7 @@ class Agent:
                 self.writer.add_text("test accuracy(final)", str(metric.test_acc[0]))
                 self.writer.add_figure("confusion matrix(final)", fig)
                 self.writer.add_text("classification report(final)", metric.report[0])
-                self.logger.test(test_metric=metric)
+                # self.logger.test(test_metric=metric)
                 np.save(self.result_path + "data/" + self.args.model_name + "_test_metric.npy", metric.item())
 
     def multi_test(self, test_dataset):

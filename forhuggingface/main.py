@@ -13,7 +13,7 @@ from utils import Metric
 
 model_name_or_path = "jonatasgrosman/wav2vec2-large-xlsr-53-chinese-zh-cn"
 num_class = 6
-epochs = 30
+epochs = 10
 pooling_mode = 'mean'
 spilt_rate = [0.6, 0.2, 0.2]
 use_amp = True
@@ -71,6 +71,7 @@ def train(dataset, paths: list):
         model_name_or_path,
         config=config,
     )
+    model.push_to_hub("test")
     model.gradient_checkpointing_enable()
     parameter = []
     for name, param in model.named_parameters():
@@ -80,7 +81,7 @@ def train(dataset, paths: list):
             parameter.append({'params': param, "lr": lr})
 
     optimizer = torch.optim.AdamW(parameter, lr=lr, betas=(beta1, beta2), weight_decay=0.2)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.3)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=4, gamma=0.3)
     if use_amp:
         scaler = GradScaler()
     else:
@@ -130,7 +131,7 @@ def train(dataset, paths: list):
         torch.save(state, paths[3])
 
 
-def test(model_path: str, dataset):
+def m_test(model_path: str, dataset):
     model = torch.load(model_path)
     test_acc = 0
     test_loss = []
@@ -153,5 +154,5 @@ if __name__ == "__main__":
     dataset = PretrainDataModule(model_name_or_path, 6, "casia_y.npy", "../preprocess/datasets/CASIA", duration=6)
     dataset.setup()
     train(dataset, paths)
-    test(paths[0], dataset)
-    test(paths[1], dataset)
+    m_test(paths[0], dataset)
+    m_test(paths[1], dataset)
