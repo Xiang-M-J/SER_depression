@@ -61,16 +61,22 @@ class BaseModel(nn.Module):
         self.classifier1 = nn.Sequential(
             nn.Linear(arg.dilation, 1),
             Rearrange("N C L H -> N C (L H)"),
+            # nn.BatchNorm1d(arg.filters),
             nn.AdaptiveAvgPool1d(1),
             Rearrange('N C L -> N (C L)'),
-            nn.Linear(in_features=arg.filters, out_features=arg.num_class[0])
+            nn.Linear(in_features=arg.filters, out_features=arg.num_class[0]),
+            # nn.Linear(in_features=arg.filters, out_features=256),
+            # nn.Linear(in_features=256, out_features=arg.num_class[0])
         )
         self.classifier2 = nn.Sequential(
             nn.Linear(arg.dilation, 1),
             Rearrange("N C L H -> N C (L H)"),
+            # nn.BatchNorm1d(arg.filters),
             nn.AdaptiveAvgPool1d(1),
             Rearrange('N C L -> N (C L)'),
-            nn.Linear(in_features=arg.filters, out_features=arg.num_class[1])
+            nn.Linear(in_features=arg.filters, out_features=arg.num_class[1]),
+            # nn.Linear(in_features=arg.filters, out_features=256),
+            # nn.Linear(in_features=256, out_features=arg.num_class[1])
         )
 
     def forward(self, x, y, index=0, mask=None):

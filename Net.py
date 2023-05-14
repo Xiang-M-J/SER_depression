@@ -155,14 +155,14 @@ class Agent:
 
             # 对于MTCN
             # pretrain_name = ['generalExtractor', 'specialExtractor']
-            pretrain_name = ['generalExtractor']  # 只固定 generalExtractor的效果更好一点
+            # pretrain_name = ['generalExtractor']  # 只固定 generalExtractor的效果更好一点
             # for k, v in pretrain_model_dict:
             #     if k.split('.')[0] != "classifier":
             #         model_dict.update({k: v})
-            model.block.block1.load_state_dict(pretrain_model.block.block1.state_dict())
+            model.extractor.general.load_state_dict(pretrain_model.extractor.general.state_dict())
             parameter = []
             for name, param in model.named_parameters():
-                if name.split('.')[0] in pretrain_name:
+                if "general" in name:
                     parameter.append({"params": param, "lr": 0.2 * self.lr})
                     # param.requires_grad = False
                 else:
