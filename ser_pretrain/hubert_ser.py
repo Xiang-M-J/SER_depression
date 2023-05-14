@@ -144,9 +144,9 @@ def train(dataset, paths: list):
         train_loss = train_loss / (math.ceil(train_num / batch_size))
         val_acc = val_correct / val_num
         val_loss = val_loss / (math.ceil(train_num / batch_size))
-        metric.train_acc.append(train_acc)
+        metric.train_acc.append(train_acc*100)
         metric.train_loss.append(train_loss)
-        metric.val_acc.append(val_acc)
+        metric.val_acc.append(val_acc*100)
         metric.val_loss.append(val_loss)
         print(
             "epoch: {}, train_accuracy: {:.3f}\t train_loss: {:.4f}; \t val_accuracy: {:.3f}\t val_loss: {:.4f}".format(

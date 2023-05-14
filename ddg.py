@@ -429,7 +429,7 @@ class DDGTrainer:
             print(f"epoch {epoch + 1}:")
             train_acc = train_acc / train_num
             train_loss = train_loss / mini_iter
-            metric.train_acc.append(train_acc)
+            metric.train_acc.append(train_acc * 100)
             metric.train_loss.append(train_loss)
             print(f"MODMA: train Loss:{train_loss:.4f}\t train Accuracy:{train_acc * 100:.3f}\t")
             model.eval()
@@ -440,13 +440,13 @@ class DDGTrainer:
                     val_loss += loss.data.item()
             val_acc = val_acc / val_num
             val_loss = val_loss / math.ceil(val_num / self.batch_size)
-            metric.val_acc.append(val_acc)
+            metric.val_acc.append(val_acc * 100)
             metric.val_loss.append(val_loss)
             print(f"MODMA: val Loss:{val_loss:.4f}\t val Accuracy:{val_acc * 100:.3f}\t")
             if val_acc > best_val_accuracy:
                 best_val_accuracy = val_acc
-                metric.best_val_acc[0] = train_acc
-                metric.best_val_acc[1] = best_val_accuracy
+                metric.best_val_acc[0] = train_acc * 100
+                metric.best_val_acc[1] = best_val_accuracy * 100
                 torch.save(model, self.best_path)
             if val_acc > 0.994:
                 tmp = self.multi_test(model)
@@ -508,7 +508,7 @@ class DDGTrainer:
         test_acc = test_acc / test_num
         test_loss = test_loss / math.ceil(test_num / self.batch_size)
         print(f"{dataset_name}: test Loss:{test_loss:.4f}\t test Accuracy:{test_acc * 100:.3f}\t")
-        metric.test_acc.append(test_acc)
+        metric.test_acc.append(test_acc * 100)
         metric.test_loss.append(test_loss)
         np.save(self.result_test_path, metric.item())
 
