@@ -5,9 +5,9 @@ from DANN import DANNModel
 from ADDA import Encoder
 
 args = Args()
-spilt_rate = [0.7, 0.2, 0.1]  # 训练集、验证集、测试集分割比例
+spilt_rate = [0.6, 0.2, 0.2]  # 训练集、验证集、测试集分割比例
 # seed_everything(args.random_seed)
-model_type = 'MultiTIM'
+model_type = 'Transformer'
 dataset_name = "MODMA"
 args.model_type = model_type
 args.dataset_name = dataset_name

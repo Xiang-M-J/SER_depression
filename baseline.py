@@ -1,3 +1,5 @@
+import time
+
 import torch
 import torch.nn as nn
 from einops.layers.torch import Rearrange
@@ -268,6 +270,7 @@ class Transformer(nn.Module):
             nn.ReLU(),
             Rearrange("N C L -> N L C"),
         )
+        self.pe = PositionEncoding(args.d_model, max_len=5000)
         encoderLayer = TransformerEncoderLayer(args.d_model, args.n_head, args.d_ff, args.drop_rate,
                                                batch_first=True)
         self.generalFeatureExtractor = TransformerEncoder(
@@ -285,6 +288,7 @@ class Transformer(nn.Module):
 
     def forward(self, x, mask=None):
         x = self.prepare(x)
+        # x = self.pe(x)
         if mask is not None:
             x = self.generalFeatureExtractor(x, mask)
         else:

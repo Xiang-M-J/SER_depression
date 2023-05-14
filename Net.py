@@ -1,6 +1,7 @@
 import datetime
 import math
 import os
+import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -204,6 +205,8 @@ class Net_Instance:
             train_loss = 0
             val_correct = 0
             val_loss = 0
+            t1 = time.time()
+            # print(time.asctime(time.localtime(time.time())))
             for step, (bx, by) in enumerate(train_loader):
                 if torch.cuda.is_available():
                     bx = bx.cuda()
@@ -220,7 +223,9 @@ class Net_Instance:
                 train_correct += accuracy_cal(output, by)
                 train_loss += loss.data.item()
                 steps += 1
-
+            # print(time.asctime(time.localtime(time.time())))
+            t2 = time.time()
+            print(f"{self.model_type} cost: ", t2-t1)
             model.eval()
             with torch.no_grad():
                 for step, (vx, vy) in enumerate(val_loader):

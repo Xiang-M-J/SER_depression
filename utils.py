@@ -3,6 +3,7 @@ import math
 import os
 
 import torchaudio
+from matplotlib.font_manager import FontProperties
 from transformers import Wav2Vec2Processor
 import torch.nn as nn
 from config import Args
@@ -16,6 +17,10 @@ import random
 
 plt.rcParams['font.sans-serif'] = ['Simhei']  # 显示中文
 plt.rcParams['axes.unicode_minus'] = False  # 显示负号
+plt.rcParams['font.size'] = "14.0"
+font_small = FontProperties(family="Simhei", size=10)
+# font_song = FontProperties(fname=r'c:\windows\Fonts\simsun.ttc', size=16)  # 宋体
+# font_TimesNewsman = FontProperties(family='Times New Roman', size=8)
 
 CLASS_LABELS = ["angry", "boredom", "disgust", "fear", "happy", "neutral", "sad"]
 IEMOCAP_LABELS = ['angry', 'excited', 'frustrated', 'happy', 'neutral', 'sad']
@@ -280,7 +285,7 @@ def confusion_matrix(pred, labels, conf_matrix):
     return conf_matrix
 
 
-def plot_matrix(cm, labels_name, model_name: str, title='Confusion matrix', normalize=False,
+def plot_matrix(cm, labels_name, model_name: str, title='混淆矩阵', normalize=False,
                 result_path: str = "results/"):
     """绘制混淆矩阵，保存并返回
 
@@ -335,8 +340,8 @@ def plot_matrix(cm, labels_name, model_name: str, title='Confusion matrix', norm
                          color="white" if cm[i][j] > thresh else "black")
     plt.tight_layout()
     # plt.subplots_adjust(left=0.01,bottom=0.1)
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
+    plt.ylabel('真实标签', fontproperties=font_small)
+    plt.xlabel('预测标签', fontproperties=font_small)
     plt.savefig(result_path + "images/" + model_name + "_confusion_matrix.jpg", dpi=dpi)
     # 显示
     # plt.show()
@@ -547,7 +552,6 @@ def plot_2(path, name: str, result_path: str = "results/", ):
         result_path: 保存图片的路径
 
     Returns:
-
     """
     metric = np.load(path, allow_pickle=True).item()
     train_acc = metric['train_acc']
@@ -559,17 +563,17 @@ def plot_2(path, name: str, result_path: str = "results/", ):
     plt.subplot(1, 2, 1)
     plt.plot(epoch, train_acc)
     plt.plot(epoch, val_acc)
-    plt.legend(["train accuracy", "validation accuracy"])
-    plt.xlabel("epoch")
-    plt.ylabel("accuracy(%)")
-    plt.title("train accuracy and validation accuracy")
+    plt.legend(["训练集准确率", "验证集准确率"])
+    plt.xlabel("迭代轮次")
+    plt.ylabel("准确率(%)")
+    plt.title("训练集与验证集准确率变化曲线图")
     plt.subplot(1, 2, 2)
     plt.plot(epoch, train_loss)
     plt.plot(epoch, val_loss)
-    plt.legend(["train loss", "validation loss"])
-    plt.xlabel("epoch")
-    plt.ylabel("loss")
-    plt.title("train loss and validation loss")
+    plt.legend(["训练集损失", "验证集损失"])
+    plt.xlabel("迭代轮次")
+    plt.ylabel("损失")
+    plt.title("训练集与验证集损失变化曲线图")
     plt.savefig(result_path + "images/" + name + "acc_and_loss.svg", dpi=dpi)
 
 
@@ -825,8 +829,8 @@ if __name__ == "__main__":
     # plot_2(r"D:\graduate_code\SER_depression\stores\results\data\MultiTIM_train_ADD_DIFF_MODMA_order3_drop1_mfcc_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse_train_metric.npy", "MultiTIM_MODMA")
     # args = Args()
     # plot_noam(args=args)
-    data = np.load(r"D:\graduate_code\SER_depression\stores\results\data\MultiTIM_train_ADD_DIFF_MODMA_order3_drop1_mfcc_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse_train_metric.npy", allow_pickle=True).item()
-    # x = data['x']
-    # print(x)
-    print()
+    # data = np.load(
+    #     r"D:\graduate_code\SER_depression\stores\results\data\MultiTIM_train_ADD_DIFF_MODMA_order3_drop1_mfcc_epoch100_l2re2_lr0004_pretrainFalse_clusterFalse_train_metric.npy",
+    #     allow_pickle=True).item()
+    plot_2(path="stores/results/data/ddg/train_ddg4_3.npy", name="ddg4_3_acc_and_loss", result_path="stores/results/")
     pass
