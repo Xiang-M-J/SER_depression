@@ -17,10 +17,13 @@ wandb
 .idea
 *.svg
 *.7z
+*.wav
+*.npy
 log.txt
 ser_pretrain/x
 ser_pretrain/y
 ser_pretrain/models
 ser_pretrain/predict
 ser_pretrain/results
-forhuggingface
+forhuggingface/models
+forhuggingface/results
