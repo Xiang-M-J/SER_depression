@@ -8,11 +8,8 @@ realtime_images
 __pycache__
 results
 preprocess/DAIC
-meta
-old
 models
 runs
-wandb
 *.pt
 .idea
 *.svg

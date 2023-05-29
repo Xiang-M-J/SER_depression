@@ -17,7 +17,7 @@ kernel_size: 2
 load_weight: false
 lr: 0.0004
 merge_type: linear
-model_name: MTCN_AT_DIFF_MODMA_order3_drop1_epoch100_l2re2_lr0004_pretrainFalse
+model_name: ' '
 model_type: MTCN
 multi_type: AT_DIFF
 n_head: 8
